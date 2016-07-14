@@ -1,3 +1,5 @@
+![say no to TOFU](sharkey.png)
+
 # sharkey
 
 [![license](http://img.shields.io/badge/license-apache_2.0-blue.svg?style=flat)](https://raw.githubusercontent.com/square/certigo/master/LICENSE)
