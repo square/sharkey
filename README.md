@@ -48,12 +48,23 @@ Configuration (example):
       address: test/test.db
       schema: ssh_ca
       type: sqlite
+    # sample mysql config
     # db:
     #   username: root
     #   password: password
     #   address: ip:port
     #   schema: db_name
     #   type: mysql
+    # sample mysql tls config
+    # db:
+    #   username: root
+    #   address: ip:port
+    #   type: mysql
+    #   tls:
+    #     ca: /path/to/mysql-ca-bundle.pem
+    #     cert: /path/to/mysql-cert.pem
+    #     key: /path/to/mysql-cert-key.pem
+    #     min_version: 1.2 (min version of tls supported by mysql)
     tls:
       ca: /path/to/ca-bundle.pem
       cert: /path/to/server-certificate.pem 
