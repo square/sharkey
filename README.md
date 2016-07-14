@@ -1,6 +1,7 @@
 # sharkey
 
 [![license](http://img.shields.io/badge/license-apache_2.0-blue.svg?style=flat)](https://raw.githubusercontent.com/square/certigo/master/LICENSE)
+[![report](https://goreportcard.com/badge/github.com/square/sharkey)](https://goreportcard.com/report/github.com/square/sharkey)
 
 Sharkey is a service for managing certificates for use by OpenSSH.
 
