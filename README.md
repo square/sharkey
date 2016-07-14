@@ -43,35 +43,43 @@ Usage:
 
 Configuration (example):
 
+    # SQLite database
+    # ---
     db:
       username: root
       address: test/test.db
       schema: ssh_ca
       type: sqlite
-    # sample mysql config
+
+    # MySQL database
+    # ---
     # db:
     #   username: root
     #   password: password
-    #   address: ip:port
-    #   schema: db_name
+    #   address: hostname:port
     #   type: mysql
-    # sample mysql tls config
-    # db:
-    #   username: root
-    #   address: ip:port
-    #   type: mysql
-    #   tls:
+    #   tls:                                       # MySQL TLS config (optional)
     #     ca: /path/to/mysql-ca-bundle.pem
-    #     cert: /path/to/mysql-cert.pem
-    #     key: /path/to/mysql-cert-key.pem
-    #     min_version: 1.2 #(min version of tls supported by mysql)
+    #     cert: /path/to/mysql-client-cert.pem     # MySQL client cert
+    #     key: /path/to/mysql-client-cert-key.pem  # MySQL client cert key
+    #     min_version: 1.2                         # Min. TLS version
+
+    # Server listening address
+    listen_addr: "0.0.0.0:8080"
+
+    # TLS config for serving requests
+    # ---
     tls:
       ca: /path/to/ca-bundle.pem
       cert: /path/to/server-certificate.pem 
       key: /path/to/server-certificate-key.pem
+      min_version: 1.2                             # Min. TLS version (optional) 
+
+    # Signing key (from ssh-keygen)
     signing_key: /path/to/ca-signing-key 
+
+    # Lifetime/validity duration for generated host certificates
     cert_duration: 168h
-    listen_addr: "127.0.0.1:8080"
 
 A signing key for generating host certificates can be generated with `ssh-keygen`.
 
@@ -83,7 +91,7 @@ server and installs it on the machine.
 The client will use a TLS client certificate to make a
 connection to the server and authenticate itself. This assumes that there is a
 long-lived certificate and key installed on each machine that uses the client. We
-then periodically read the host key for the locally-running OpenSSH (`host_key`), send it
+then periodically read the host key for the locally running OpenSSH (`host_key`), send it
 to the server, and retrieve a signed host certificate based on that key. The
 signed host certificate is then installed on the machine (`signed_cert`).
 
@@ -98,15 +106,27 @@ Usage:
 
 Configuration (example):
 
+    # Server address
+    request_addr: "https://sharkey-server.example:8080"
+
+    # TLS config for making requests
+    # ---
     tls:
       ca: /path/to/ca-bundle.pem
       cert: /path/to/client-certificate.pem 
       key: /path/to/client-certificate-key.pem
-    request_addr: "https://sharkey-server.example:8080"
+
+    # OpenSSH host key (unsigned)
     host_key: /etc/ssh/ssh_host_rsa_key.pub
+
+    # Where to install the signed host certificate
     signed_cert: /etc/ssh/ssh_host_rsa_key_signed.pub
+
+    # Where to install the known_hosts file
     known_hosts: /etc/ssh/known_hosts
-    sleep: "600s"
+
+    # How often to refresh/request new certificate
+    sleep: "24h"
 
 OpenSSH will have to be configured to read the signed host certificate
 (this is with the `HostCertificate` config option in `sshd_config`). If the signed host
