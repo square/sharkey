@@ -47,7 +47,7 @@ Configuration (example):
     # ---
     db:
       username: root
-      address: test/test.db
+      address: /path/to/sharkey.db
       schema: ssh_ca
       type: sqlite
 
@@ -57,6 +57,7 @@ Configuration (example):
     #   username: root
     #   password: password
     #   address: hostname:port
+    #   schema: ssh_ca
     #   type: mysql
     #   tls:                                       # MySQL TLS config (optional)
     #     ca: /path/to/mysql-ca-bundle.pem
