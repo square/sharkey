@@ -64,7 +64,7 @@ Configuration (example):
     #     ca: /path/to/mysql-ca-bundle.pem
     #     cert: /path/to/mysql-cert.pem
     #     key: /path/to/mysql-cert-key.pem
-    #     min_version: 1.2 (min version of tls supported by mysql)
+    #     min_version: 1.2 #(min version of tls supported by mysql)
     tls:
       ca: /path/to/ca-bundle.pem
       cert: /path/to/server-certificate.pem 
