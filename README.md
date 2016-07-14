@@ -24,7 +24,7 @@ Check out the repository, and build client/server:
 
 ### Server
 
-The server component accepts requests and issues host certificates.
+The server component accepts requests and issues short lived host certificates.
 
 Clients send their public key to the server (via TLS with
 mutual authentication) periodically. The server authenticates the client by
