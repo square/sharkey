@@ -52,7 +52,7 @@ func TestSignHost(t *testing.T) {
 		t.Fatalf("error generating context: %s", err.Error())
 	}
 	defer c.db.Close()
-	data, err := ioutil.ReadFile("../ssh/ssh_host_rsa_key.pub")
+	data, err := ioutil.ReadFile("../test/ssh/ssh_host_rsa_key.pub")
 	if err != nil {
 		t.Fatalf("error reading test ssh host key: %s", err.Error())
 	}
@@ -113,7 +113,7 @@ func generateContext() (*context, error) {
 		return nil, err
 	}
 	conf := &config{
-		SigningKey:   "../keys/server_ca",
+		SigningKey:   "../test/keys/server_ca",
 		CertDuration: "160h",
 	}
 
@@ -156,7 +156,7 @@ func generateRequest() (*http.Request, error) {
 	conn := tls.ConnectionState{
 		VerifiedChains: chain,
 	}
-	key, err := os.Open("../ssh/ssh_host_rsa_key.pub")
+	key, err := os.Open("../test/ssh/ssh_host_rsa_key.pub")
 	if err != nil {
 		return nil, err
 	}
