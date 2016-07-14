@@ -48,6 +48,12 @@ Configuration (example):
       address: test/test.db
       schema: ssh_ca
       type: sqlite
+    # db:
+    #   username: root
+    #   password: password
+    #   address: ip:port
+    #   schema: db_name
+    #   type: mysql
     tls:
       ca: /path/to/ca-bundle.pem
       cert: /path/to/server-certificate.pem 
