@@ -1,0 +1,19 @@
+language: go
+
+sudo: required
+dist: trusty
+
+services:
+  - docker
+
+go:
+  - 1.6
+
+install:
+  - go build -o sharkey-server -v ./server
+  - go build -o sharkey-client -v ./client
+  - docker build -t square/sharkey-server .
+
+script:
+  - go test -v ./server
+  - go test -v ./client
