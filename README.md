@@ -33,10 +33,7 @@ good, the server will take the public key in the request and issue an OpenSSH
 host certificate for the requested hostname.
 
 A log of all issued certificates is stored in a database. The server can
-generate a `known_hosts` file from the issuance log if required. It is also
-possible to have the server strip a suffix from all hostnames (e.g. if all your
-servers have a common TLD/domain that you don't want in the certificate) via
-the `--suffix` flag. 
+generate a `known_hosts` file from the issuance log if required.  
 
 Usage:
 
