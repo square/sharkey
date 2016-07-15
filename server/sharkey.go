@@ -28,6 +28,8 @@ import (
 	"net/http"
 	"os"
 
+	"bitbucket.org/liamstask/goose/lib/goose"
+
 	"gopkg.in/alecthomas/kingpin.v2"
 	"gopkg.in/yaml.v2"
 
@@ -37,9 +39,15 @@ import (
 )
 
 var (
-	app        = kingpin.New("ssh-ca server", "Certificate issuer of the ssh-ca system.")
-	configPath = kingpin.Flag("config", "Path to yaml config file for setup").Required().String()
-	suffix     = kingpin.Flag("suffix", "Suffix of hostnames that will be supplied to server.").String()
+	app        = kingpin.New("sharkey-server", "Certificate issuer of the ssh-ca system.")
+	configPath = app.Flag("config", "Path to config file for server.").Required().ExistingFile()
+
+	// Start server
+	startCmd = app.Command("start", "Run the sharkey server.")
+
+	// Run migrations
+	migrateCmd    = app.Command("migrate", "Set up database/run migrations.")
+	migrationsDir = migrateCmd.Flag("migrations", "Path to migrations directory.").ExistingDir()
 )
 
 type databaseConfig struct {
@@ -64,6 +72,7 @@ type config struct {
 	SigningKey   string         `yaml:"signing_key"`
 	CertDuration string         `yaml:"cert_duration"`
 	ListenAddr   string         `yaml:"listen_addr"`
+	StripSuffix  string         `yaml:"strip_suffix"`
 }
 
 type statusResponse struct {
@@ -78,8 +87,9 @@ type context struct {
 }
 
 func main() {
-	kingpin.Version("0.0.1")
-	kingpin.Parse()
+	app.Version("0.0.1")
+	command := kingpin.MustParse(app.Parse(os.Args[1:]))
+
 	data, err := ioutil.ReadFile(*configPath)
 	if err != nil {
 		log.Fatal("error reading config file")
@@ -90,7 +100,51 @@ func main() {
 		log.Fatal("error parsing config file")
 	}
 
-	startServer(&conf)
+	switch command {
+	case startCmd.FullCommand():
+		startServer(&conf)
+	case migrateCmd.FullCommand():
+		migrate(&conf)
+	}
+}
+
+func migrate(conf *config) {
+	db, err := conf.getDB()
+	if err != nil {
+		log.Fatalf("unable to open database: %s\n", err)
+	}
+	defer db.Close()
+
+	driver := goose.DBDriver{
+		Name: conf.Database.Type,
+	}
+
+	switch conf.Database.Type {
+	case "mysql":
+		driver.Import = "github.com/go-sql-driver/mysql"
+		driver.Dialect = &goose.MySqlDialect{}
+	case "sqlite":
+		driver.Import = "github.com/mattn/go-sqlite3"
+		driver.Dialect = &goose.Sqlite3Dialect{}
+	default:
+		log.Fatalf("unknown database type %s", conf.Database.Type)
+	}
+
+	gooseConf := goose.DBConf{
+		MigrationsDir: *migrationsDir,
+		Env:           "sharkey",
+		Driver:        driver,
+	}
+
+	desiredVersion, err := goose.GetMostRecentDBVersion(*migrationsDir)
+	if err != nil {
+		log.Fatalf("unable to run migrations: %s\n", err)
+	}
+
+	err = goose.RunMigrationsOnDb(&gooseConf, *migrationsDir, desiredVersion, db)
+	if err != nil {
+		log.Fatalf("unable to run migrations: %s\n", err)
+	}
 }
 
 func startServer(conf *config) {
@@ -101,7 +155,7 @@ func startServer(conf *config) {
 	var err error
 	c.db, err = conf.getDB()
 	if err != nil {
-		log.Fatal(os.Stderr, "unable to open database: %s\n", err)
+		log.Fatalf("unable to open database: %s\n", err)
 	}
 
 	defer c.db.Close()

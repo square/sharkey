@@ -1,3 +1,0 @@
-development:
-  driver: sqlite3
-  open: file:development.db

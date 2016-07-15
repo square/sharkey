@@ -128,8 +128,8 @@ func (c *context) signHost(hostname string, serial uint64, pubkey ssh.PublicKey)
 	}
 	endTime := startTime.Add(week)
 	principals := []string{hostname}
-	if *suffix != "" && strings.HasSuffix(hostname, *suffix) {
-		principals = append(principals, strings.TrimSuffix(hostname, *suffix))
+	if c.conf.StripSuffix != "" && strings.HasSuffix(hostname, c.conf.StripSuffix) {
+		principals = append(principals, strings.TrimSuffix(hostname, c.conf.StripSuffix))
 	}
 	template := ssh.Certificate{
 		Nonce:           nonce,

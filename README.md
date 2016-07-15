@@ -22,35 +22,15 @@ Check out the repository, and build client/server:
     go build -o sharkey-client ./client
     go build -o sharkey-server ./server
 
-### Database
-
-Sharkey supports both SQLite and MySQL. We use [goose][goose] to manage
-database migrations. You can find migrations/goose configuration files in the
-[`db/sqlite`](./db/sqlite) and [`db/mysql`](./db/mysql) directories.
-
-In order to set up a "development.db" SQLite database:
-
-    # Run migrations
-    goose -path db/sqlite up 
-
-    # Check database status
-    goose -path db/sqlite status
-
-You can configure where [goose][goose] applies migrations by setting up a
-`dbconf.yml` with your settings/credentials. See the [goose][goose]
-documentation for more info.
-
-[goose]: https://bitbucket.org/liamstask/goose
-
 ### Server
 
 The server component accepts requests and issues short lived host certificates.
 
-Clients send their public key to the server (via TLS with
-mutual authentication) periodically. The server authenticates the client by
-checking that its certificate is valid for the requested hostname. If
-everything looks good, the server will take the public key in the request and
-issue an OpenSSH host certificate for the requested hostname.
+Clients send their public key to the server (via TLS with mutual
+authentication) periodically. The server authenticates the client by checking
+that its certificate is valid for the requested hostname. If everything looks
+good, the server will take the public key in the request and issue an OpenSSH
+host certificate for the requested hostname.
 
 A log of all issued certificates is stored in a database. The server can
 generate a `known_hosts` file from the issuance log if required. It is also
@@ -60,13 +40,24 @@ the `--suffix` flag.
 
 Usage:
 
-    usage: sharkey-server --config=CONFIG [<flags>]
-
+    usage: sharkey-server --config=CONFIG [<flags>] <command> [<args> ...]
+    
+    Certificate issuer of the ssh-ca system.
+    
     Flags:
       --help           Show context-sensitive help (also try --help-long and --help-man).
-      --config=CONFIG  Path to yaml config file for setup
-      --suffix=SUFFIX  Suffix of hostnames that will be supplied to server.
+      --config=CONFIG  Path to config file for server.
       --version        Show application version.
+    
+    Commands:
+      help [<command>...]
+        Show help.
+    
+      start
+        Run the sharkey server.
+    
+      migrate [<flags>]
+        Set up database/run migrations.
 
 Configuration (example):
 
@@ -107,19 +98,42 @@ Configuration (example):
     # Lifetime/validity duration for generated host certificates
     cert_duration: 168h
 
+    # Optional suffix to strip from client hostnames when generating certificates.
+    # This is useful if all your machines have a common TLD/domain that you don't
+    # want to include in generated certificates. Leave empty to disable.
+    strip_suffix: ".squareup.com"
+
 A signing key for generating host certificates can be generated with `ssh-keygen`.
+
+#### Database
+
+Sharkey supports both SQLite and MySQL. There is a built-in command in the
+server binary to manage migrations (based on [goose][goose]).
+
+To run migrations on a configured database:
+
+    # SQLite
+    ./sharkey-server --config=[CONFIG] migrate --migrations=db/sqlite
+
+    # MySQL
+    ./sharkey-server --config=[CONFIG] migrate --migrations=db/mysql
+
+You can also manage migrations using the [goose][goose] command-line utility.
+See the [goose][goose] documentation for more info.
+
+[goose]: https://bitbucket.org/liamstask/goose
 
 ### Client
 
 The client component periodically requests a new host certificate from the
 server and installs it on the machine.
 
-The client will use a TLS client certificate to make a
-connection to the server and authenticate itself. This assumes that there is a
-long-lived certificate and key installed on each machine that uses the client. We
-then periodically read the host key for the locally running OpenSSH (`host_key`), send it
-to the server, and retrieve a signed host certificate based on that key. The
-signed host certificate is then installed on the machine (`signed_cert`).
+The client will use a TLS client certificate to make a connection to the server
+and authenticate itself. This assumes that there is a long-lived certificate
+and key installed on each machine that uses the client. We then periodically
+read the host key for the locally running OpenSSH (`host_key`), send it to the
+server, and retrieve a signed host certificate based on that key. The signed
+host certificate is then installed on the machine (`signed_cert`).
 
 Usage:
 
@@ -154,8 +168,8 @@ Configuration (example):
     # How often to refresh/request new certificate
     sleep: "24h"
 
-OpenSSH will have to be configured to read the signed host certificate
-(this is with the `HostCertificate` config option in `sshd_config`). If the signed host
+OpenSSH will have to be configured to read the signed host certificate (this is
+with the `HostCertificate` config option in `sshd_config`). If the signed host
 certificate is missing from disk, OpenSSH will fall back to TOFU with the
 default host key. Therefore, it should always be safe to configure a host
 certificate; even if the Sharkey client fails you can still SSH into your

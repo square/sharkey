@@ -1,13 +1,11 @@
 ---
 db:
-  username: root
-  address: ../test/test.db
-  schema: ssh_ca
+  address: test/test.db
   type: sqlite
 tls:
-  ca: ../test/tls/CertAuth.crt
-  cert: ../test/tls/testCert.crt
-  key: ../test/tls/testCert.key
-signing_key: ../test/keys/server_ca
+  ca: test/tls/CertAuth.crt
+  cert: test/tls/testCert.crt
+  key: test/tls/testCert.key
+signing_key: test/keys/server_ca
 cert_duration: 168h
 listen_addr: "127.0.0.1:8080"
