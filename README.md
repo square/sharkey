@@ -22,6 +22,22 @@ Check out the repository, and build client/server:
     go build -o sharkey-client ./client
     go build -o sharkey-server ./server
 
+### Database
+
+Sharkey supports both SQLite and MySQL. We use [goose](goose) to manage
+database migrations. You can find migrations/goose configuration files in the
+[`db/sqlite`](./db/sqlite) and [`db/mysql`](./db/mysql) directories.
+
+In order to set up a "development.db" SQLite database:
+
+    # Run migrations
+    goose -path db/sqlite up 
+
+    # Check database status
+    goose -path db/sqlite status
+
+[goose]: https://bitbucket.org/liamstask/goose
+
 ### Server
 
 The server component accepts requests and issues short lived host certificates.
