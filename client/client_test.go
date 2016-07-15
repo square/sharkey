@@ -33,17 +33,15 @@ func TestEnroll(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error generating context: %s", err.Error())
 	}
+	defer cleanup(c)
 	defer ts.Close()
 	c.enroll()
-	data, err := ioutil.ReadFile("signedCert.pub")
+	data, err := ioutil.ReadFile(c.conf.SignedCert)
 	if err != nil {
 		t.Fatalf("error reading signed cert: %s", err.Error())
 	}
 	if string(data) != "Test response\n" {
 		t.Fatalf("signed cert contains wrong info: %s", string(data))
-	}
-	if err = os.Remove("signedCert.pub"); err != nil {
-		t.Fatalf("error deleting signed cert: %s", err.Error())
 	}
 }
 
@@ -55,30 +53,43 @@ func TestKnownHosts(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error generating context: %s", err.Error())
 	}
+	defer cleanup(c)
 	defer ts.Close()
 	c.makeKnownHosts()
-	data, err := ioutil.ReadFile("knownhosts.pub")
+	data, err := ioutil.ReadFile(c.conf.KnownHosts)
 	if err != nil {
 		t.Fatalf("error reading signed cert: %s", err.Error())
 	}
 	if string(data) != "Test response\n" {
 		t.Fatalf("signed cert contains wrong info: %s", string(data))
 	}
-	if err = os.Remove("knownhosts.pub"); err != nil {
-		t.Fatalf("error deleting signed cert: %s", err.Error())
-	}
 }
 
 func generateContext(url string) (*context, error) {
+	signedCertTmp, err := ioutil.TempFile("", "sharkey-test")
+	if err != nil {
+		panic(err)
+	}
+
+	knownHostsTmp, err := ioutil.TempFile("", "sharkey-test")
+	if err != nil {
+		panic(err)
+	}
+
 	conf := &config{
 		RequestAddr: url,
-		HostKey:     "client_test.go",
-		SignedCert:  "signedCert.pub",
-		KnownHosts:  "knownhosts.pub",
+		HostKey:     "testdata/ssh_host_rsa_key.pub",
+		SignedCert:  signedCertTmp.Name(),
+		KnownHosts:  knownHostsTmp.Name(),
 	}
 	c := &context{
 		conf:   conf,
 		client: &http.Client{},
 	}
 	return c, nil
+}
+
+func cleanup(c *context) {
+	os.Remove(c.conf.SignedCert)
+	os.Remove(c.conf.KnownHosts)
 }
