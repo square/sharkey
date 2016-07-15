@@ -15,5 +15,8 @@ install:
   - docker build -t square/sharkey-server .
 
 script:
+  # Unit tests
   - go test -v ./server
   - go test -v ./client
+  # Integration tests
+  - ./integration-test.sh
