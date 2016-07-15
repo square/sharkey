@@ -1,10 +1,10 @@
 ---
 tls:
-  ca: ../test/tls/CertAuth.crt
-  cert: ../test/tls/testCert.crt
-  key: ../test/tls/testCert.key
+  ca: test/tls/CertAuth.crt
+  cert: test/tls/testCert.crt
+  key: test/tls/testCert.key
 request_addr: "https://127.0.0.1:8080"
-host_key: "../test/ssh/ssh_host_rsa_key.pub"
-signed_cert: "../test/ssh/signed_cert.pub"
-known_hosts: "../test/ssh/known_hosts"
+host_key: test/ssh/ssh_host_rsa_key.pub
+signed_cert: test/ssh/signed_cert.pub
+known_hosts: test/ssh/known_hosts
 sleep: "2s"

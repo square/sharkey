@@ -32,8 +32,8 @@ import (
 )
 
 var (
-	app        = kingpin.New("ssh-ca server", "Certificate issuer of the ssh-ca system.")
-	configPath = kingpin.Flag("config", "Path to yaml config file for setup").Required().String()
+	app        = kingpin.New("sharkey-client", "Certificate client of the ssh-ca system.")
+	configPath = kingpin.Flag("config", "Path to config file for client.").Required().String()
 )
 
 type tlsConfig struct {
