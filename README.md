@@ -73,9 +73,7 @@ Configuration (example):
     # SQLite database
     # ---
     db:
-      username: root
       address: /path/to/sharkey.db
-      schema: ssh_ca
       type: sqlite
 
     # MySQL database
