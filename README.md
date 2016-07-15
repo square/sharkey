@@ -24,7 +24,7 @@ Check out the repository, and build client/server:
 
 ### Database
 
-Sharkey supports both SQLite and MySQL. We use [goose](goose) to manage
+Sharkey supports both SQLite and MySQL. We use [goose][goose] to manage
 database migrations. You can find migrations/goose configuration files in the
 [`db/sqlite`](./db/sqlite) and [`db/mysql`](./db/mysql) directories.
 
@@ -35,6 +35,10 @@ In order to set up a "development.db" SQLite database:
 
     # Check database status
     goose -path db/sqlite status
+
+You can configure where [goose][goose] applies migrations by setting up a
+`dbconf.yml` with your settings/credentials. See the [goose][goose]
+documentation for more info.
 
 [goose]: https://bitbucket.org/liamstask/goose
 
