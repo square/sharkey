@@ -104,7 +104,7 @@ func validClient(hostname string, r *http.Request) bool {
 		return false
 	}
 	cert := conn.VerifiedChains[0][0]
-	return cert.Subject.CommonName == hostname
+	return cert.VerifyHostname(hostname) == nil
 }
 
 func (c *context) signHost(hostname string, serial uint64, pubkey ssh.PublicKey) (*ssh.Certificate, error) {
