@@ -18,18 +18,16 @@ package main
 
 import (
 	"bytes"
-	"fmt"
 	"net/http"
 )
 
 func (c *context) KnownHosts(w http.ResponseWriter, r *http.Request) {
 	hosts, err := c.GetKnownHosts()
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprintf(w, err.Error())
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	fmt.Fprintf(w, hosts)
+	w.Write([]byte(hosts))
 }
 
 func (c *context) GetKnownHosts() (string, error) {

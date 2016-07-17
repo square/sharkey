@@ -20,7 +20,6 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"errors"
-	"fmt"
 	"io/ioutil"
 	"net/http"
 	"strings"
@@ -35,11 +34,10 @@ func (c *context) Enroll(w http.ResponseWriter, r *http.Request) {
 	hostname := vars["hostname"]
 	cert, err := c.EnrollHost(hostname, r)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprintf(w, err.Error())
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	fmt.Fprintf(w, cert)
+	w.Write([]byte(cert))
 }
 
 func (c *context) EnrollHost(hostname string, r *http.Request) (string, error) {
