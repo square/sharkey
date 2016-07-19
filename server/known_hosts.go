@@ -18,13 +18,18 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"net/http"
 )
 
 func (c *context) KnownHosts(w http.ResponseWriter, r *http.Request) {
+	if !clientAuthenticated(r) {
+		http.Error(w, errors.New("no client certificate provided"), http.StatusUnauthorized)
+	}
+
 	hosts, err := c.GetKnownHosts()
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	w.Write([]byte(hosts))

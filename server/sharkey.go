@@ -259,7 +259,7 @@ func buildConfig(opts tlsConfig) (*tls.Config, error) {
 	config := &tls.Config{
 		RootCAs:    caBundle,
 		ClientCAs:  caBundle,
-		ClientAuth: tls.RequireAndVerifyClientCert,
+		ClientAuth: tls.RequestClientCert,
 		MinVersion: tls.VersionTLS12,
 	}
 

@@ -21,6 +21,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -32,18 +33,25 @@ import (
 func (c *context) Enroll(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	hostname := vars["hostname"]
+
+	if !clientAuthenticated(r) {
+		http.Error(w, errors.New("no client certificate provided"), http.StatusUnauthorized)
+	}
+	if !clientHostnameMatches(hostname, r) {
+		http.Error(w, errors.New("hostname does not match certificate"), http.StatusForbidden)
+	}
+
 	cert, err := c.EnrollHost(hostname, r)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		log.Printf("internal error: %s", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
 	w.Write([]byte(cert))
 }
 
 func (c *context) EnrollHost(hostname string, r *http.Request) (string, error) {
-	if !validClient(hostname, r) {
-		return "", errors.New("invalid client auth")
-	}
 	data, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		return "", err
@@ -54,7 +62,7 @@ func (c *context) EnrollHost(hostname string, r *http.Request) (string, error) {
 		return "", err
 	}
 
-	//Update table with host
+	// Update table with host
 	rows, err := c.db.Query("SELECT id FROM hostkeys WHERE hostname=?", hostname)
 	if err != nil {
 		return "", err
@@ -91,12 +99,17 @@ func (c *context) EnrollHost(hostname string, r *http.Request) (string, error) {
 	if err != nil {
 		return "", err
 	}
+
 	certString := base64.StdEncoding.EncodeToString(signedCert.Marshal())
 	header := signedCert.Key.Type() + "-cert-v01@openssh.com "
 	return header + certString, nil
 }
 
-func validClient(hostname string, r *http.Request) bool {
+func clientAuthenticated(r *http.Request) bool {
+	return len(r.TLS.VerifiedChains) > 0
+}
+
+func clientHostnameMatches(hostname string, r *http.Request) bool {
 	conn := r.TLS
 	if len(conn.VerifiedChains) == 0 {
 		return false
