@@ -18,13 +18,13 @@ package main
 
 import (
 	"bytes"
-	"errors"
 	"net/http"
 )
 
 func (c *context) KnownHosts(w http.ResponseWriter, r *http.Request) {
 	if !clientAuthenticated(r) {
-		http.Error(w, errors.New("no client certificate provided"), http.StatusUnauthorized)
+		http.Error(w, "no client certificate provided", http.StatusUnauthorized)
+		return
 	}
 
 	hosts, err := c.GetKnownHosts()

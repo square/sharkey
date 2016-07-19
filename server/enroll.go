@@ -19,7 +19,6 @@ package main
 import (
 	"crypto/rand"
 	"encoding/base64"
-	"errors"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -35,10 +34,12 @@ func (c *context) Enroll(w http.ResponseWriter, r *http.Request) {
 	hostname := vars["hostname"]
 
 	if !clientAuthenticated(r) {
-		http.Error(w, errors.New("no client certificate provided"), http.StatusUnauthorized)
+		http.Error(w, "no client certificate provided", http.StatusUnauthorized)
+		return
 	}
 	if !clientHostnameMatches(hostname, r) {
-		http.Error(w, errors.New("hostname does not match certificate"), http.StatusForbidden)
+		http.Error(w, "hostname does not match certificate", http.StatusForbidden)
+		return
 	}
 
 	cert, err := c.EnrollHost(hostname, r)
