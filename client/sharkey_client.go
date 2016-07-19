@@ -122,6 +122,7 @@ func (c *context) enroll() {
 		log.Println(err)
 		return
 	}
+	defer os.Remove(tmp.Name())
 	err = os.Chmod(tmp.Name(), 0666)
 	if err != nil {
 		log.Println(err)
@@ -161,6 +162,7 @@ func (c *context) makeKnownHosts() {
 		log.Println(err)
 		return
 	}
+	defer os.Remove(tmp.Name())
 	err = os.Chmod(tmp.Name(), 0666)
 	if err != nil {
 		log.Println(err)
