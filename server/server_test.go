@@ -38,10 +38,10 @@ func TestValidClient(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error reading test ssh key: %s", err.Error())
 	}
-	if validClient(badName, request) {
+	if clientHostnameMatches(badName, request) {
 		t.Fatalf("thought a bad client was valid")
 	}
-	if !validClient(goodName, request) {
+	if !clientHostnameMatches(goodName, request) {
 		t.Fatalf("thought a good client was invalid")
 	}
 }
