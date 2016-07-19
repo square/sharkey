@@ -129,7 +129,7 @@ func (c *context) enroll() {
 }
 
 func (c *context) makeKnownHosts() {
-	url := c.conf.RequestAddr + "/known_hosts"
+	url := c.conf.RequestAddr + "/known-hosts"
 	resp, err := c.client.Get(url)
 	if err != nil {
 		log.Println(err)

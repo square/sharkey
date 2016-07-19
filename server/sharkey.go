@@ -162,7 +162,7 @@ func startServer(conf *config) {
 
 	handler := mux.NewRouter()
 	handler.Path("/enroll/{hostname}").Methods("POST").HandlerFunc(c.Enroll)
-	handler.Path("/known_hosts").Methods("GET").HandlerFunc(c.KnownHosts)
+	handler.Path("/known-hosts").Methods("GET").HandlerFunc(c.KnownHosts)
 	handler.Path("/_status").Methods("GET").HandlerFunc(c.Status)
 	tlsConfig, err := buildConfig(conf.TLS)
 	if err != nil {
