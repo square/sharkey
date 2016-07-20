@@ -117,12 +117,23 @@ func (c *context) enroll() {
 		log.Println(string(str))
 		return
 	}
-	err = ioutil.WriteFile("signedCert", str, 0666) //path to signed cert
+	tmp, err := ioutil.TempFile("", "sharkey-signed-cert")
 	if err != nil {
 		log.Println(err)
 		return
 	}
-	err = exec.Command("/usr/bin/sudo", "/bin/mv", "signedCert", c.conf.SignedCert).Run()
+	defer os.Remove(tmp.Name())
+	err = os.Chmod(tmp.Name(), 0666)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	err = ioutil.WriteFile(tmp.Name(), str, 0666)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	err = exec.Command("/usr/bin/sudo", "/bin/mv", tmp.Name(), c.conf.SignedCert).Run()
 	if err != nil {
 		log.Println(err)
 	}
@@ -146,12 +157,23 @@ func (c *context) makeKnownHosts() {
 		log.Println(string(str))
 		return
 	}
-	err = ioutil.WriteFile("knownHosts", str, 0666) //path to known_hosts
+	tmp, err := ioutil.TempFile("", "sharkey-known-hosts")
 	if err != nil {
 		log.Println(err)
 		return
 	}
-	err = exec.Command("/usr/bin/sudo", "/bin/mv", "knownHosts", c.conf.KnownHosts).Run()
+	defer os.Remove(tmp.Name())
+	err = os.Chmod(tmp.Name(), 0666)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	err = ioutil.WriteFile(tmp.Name(), str, 0666)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	err = exec.Command("/usr/bin/sudo", "/bin/mv", tmp.Name(), c.conf.KnownHosts).Run()
 	if err != nil {
 		log.Println(err)
 	}

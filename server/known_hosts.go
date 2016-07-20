@@ -22,9 +22,14 @@ import (
 )
 
 func (c *context) KnownHosts(w http.ResponseWriter, r *http.Request) {
+	if !clientAuthenticated(r) {
+		http.Error(w, "no client certificate provided", http.StatusUnauthorized)
+		return
+	}
+
 	hosts, err := c.GetKnownHosts()
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	w.Write([]byte(hosts))
