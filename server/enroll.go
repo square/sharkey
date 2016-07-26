@@ -30,6 +30,7 @@ import (
 )
 
 func (c *context) Enroll(w http.ResponseWriter, r *http.Request) {
+	log.Print("Enrolling/signing host")
 	vars := mux.Vars(r)
 	hostname := vars["hostname"]
 
@@ -44,7 +45,7 @@ func (c *context) Enroll(w http.ResponseWriter, r *http.Request) {
 
 	cert, err := c.EnrollHost(hostname, r)
 	if err != nil {
-		log.Printf("internal error: %s", err)
+		log.Print("internal error")
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

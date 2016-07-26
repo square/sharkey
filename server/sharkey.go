@@ -87,17 +87,22 @@ type context struct {
 }
 
 func main() {
+	log.Print("Starting server")
 	app.Version("0.0.1")
 	command := kingpin.MustParse(app.Parse(os.Args[1:]))
 
 	data, err := ioutil.ReadFile(*configPath)
 	if err != nil {
 		log.Fatal("error reading config file")
+	} else {
+		log.Print("Read in config file")
 	}
 
 	var conf config
 	if err := yaml.Unmarshal(data, &conf); err != nil {
 		log.Fatal("error parsing config file")
+	} else {
+		log.Print("Unmarshalled yaml config")
 	}
 
 	switch command {
@@ -109,6 +114,7 @@ func main() {
 }
 
 func migrate(conf *config) {
+	log.Print("Migrating database")
 	db, err := conf.getDB()
 	if err != nil {
 		log.Fatalf("unable to open database: %s\n", err)
@@ -148,6 +154,7 @@ func migrate(conf *config) {
 }
 
 func startServer(conf *config) {
+	log.Print("Starting http server")
 	c := &context{
 		conf: conf,
 	}
@@ -178,6 +185,7 @@ func startServer(conf *config) {
 }
 
 func (c *context) Status(w http.ResponseWriter, r *http.Request) {
+	log.Print("Status request")
 	resp := statusResponse{
 		Ok:       true,
 		Status:   "ok",
