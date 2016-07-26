@@ -55,21 +55,21 @@ type context struct {
 }
 
 func main() {
-	log.Printf("Starting client: %s", time.Now())
+	log.Print("Starting client")
 	kingpin.Version("0.0.1")
 	kingpin.Parse()
 	data, err := ioutil.ReadFile(*configPath)
 	if err != nil {
 		log.Fatalf("error reading config file: %s", err.Error())
 	} else {
-		log.Printf("Read in config file: %s", time.Now())
+		log.Print("Read in config file")
 	}
 
 	var conf config
 	if err := yaml.Unmarshal(data, &conf); err != nil {
 		log.Fatalf("error parsing config file: %s", err.Error())
 	} else {
-		log.Printf("Unmarshalled yaml config: %s", time.Now())
+		log.Print("Unmarshalled yaml config")
 	}
 	c := &context{
 		conf: &conf,
@@ -77,11 +77,11 @@ func main() {
 	if err = c.GenerateClient(); err != nil {
 		log.Fatalf("error generating http client: %s", err.Error())
 	} else {
-		log.Printf("Generated http client: %s", time.Now())
+		log.Print("Generated http client")
 	}
 
 	if c.conf.Sleep == "" {
-		log.Printf("Pinging server: %s", time.Now())
+		log.Print("Pinging server")
 		c.enroll()
 		c.makeKnownHosts()
 	} else {
@@ -91,7 +91,7 @@ func main() {
 		}
 		ticker := time.NewTicker(sleep)
 		for range ticker.C {
-			log.Printf("Pinging server: %s", time.Now())
+			log.Print("Pinging server")
 			c.enroll()
 			c.makeKnownHosts()
 		}

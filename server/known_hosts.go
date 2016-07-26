@@ -20,11 +20,10 @@ import (
 	"bytes"
 	"log"
 	"net/http"
-	"time"
 )
 
 func (c *context) KnownHosts(w http.ResponseWriter, r *http.Request) {
-	log.Printf("Returning known_hosts file: %s", time.Now())
+	log.Print("Returning known_hosts file")
 	if !clientAuthenticated(r) {
 		http.Error(w, "no client certificate provided", http.StatusUnauthorized)
 		return
