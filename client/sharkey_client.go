@@ -55,25 +55,33 @@ type context struct {
 }
 
 func main() {
+	log.Printf("Starting client: %s", time.Now())
 	kingpin.Version("0.0.1")
 	kingpin.Parse()
 	data, err := ioutil.ReadFile(*configPath)
 	if err != nil {
 		log.Fatalf("error reading config file: %s", err.Error())
+	} else {
+		log.Printf("Read in config file: %s", time.Now())
 	}
 
 	var conf config
 	if err := yaml.Unmarshal(data, &conf); err != nil {
 		log.Fatalf("error parsing config file: %s", err.Error())
+	} else {
+		log.Printf("Unmarshalled yaml config: %s", time.Now())
 	}
 	c := &context{
 		conf: &conf,
 	}
 	if err = c.GenerateClient(); err != nil {
 		log.Fatalf("error generating http client: %s", err.Error())
+	} else {
+		log.Printf("Generated http client: %s", time.Now())
 	}
 
 	if c.conf.Sleep == "" {
+		log.Printf("Pinging server: %s", time.Now())
 		c.enroll()
 		c.makeKnownHosts()
 	} else {
@@ -83,6 +91,7 @@ func main() {
 		}
 		ticker := time.NewTicker(sleep)
 		for range ticker.C {
+			log.Printf("Pinging server: %s", time.Now())
 			c.enroll()
 			c.makeKnownHosts()
 		}

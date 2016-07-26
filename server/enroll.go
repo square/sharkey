@@ -30,6 +30,7 @@ import (
 )
 
 func (c *context) Enroll(w http.ResponseWriter, r *http.Request) {
+	log.Printf("Enrolling/signing host: %s", time.Now())
 	vars := mux.Vars(r)
 	hostname := vars["hostname"]
 

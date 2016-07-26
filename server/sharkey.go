@@ -27,6 +27,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"bitbucket.org/liamstask/goose/lib/goose"
 
@@ -87,17 +88,22 @@ type context struct {
 }
 
 func main() {
+	log.Printf("Starting server: %s", time.Now())
 	app.Version("0.0.1")
 	command := kingpin.MustParse(app.Parse(os.Args[1:]))
 
 	data, err := ioutil.ReadFile(*configPath)
 	if err != nil {
 		log.Fatal("error reading config file")
+	} else {
+		log.Printf("Read in config file: %s", time.Now())
 	}
 
 	var conf config
 	if err := yaml.Unmarshal(data, &conf); err != nil {
 		log.Fatal("error parsing config file")
+	} else {
+		log.Printf("Unmarshalled yaml config: %s", time.Now())
 	}
 
 	switch command {
@@ -109,6 +115,7 @@ func main() {
 }
 
 func migrate(conf *config) {
+	log.Printf("Migrating database: %s", time.Now())
 	db, err := conf.getDB()
 	if err != nil {
 		log.Fatalf("unable to open database: %s\n", err)
@@ -148,6 +155,7 @@ func migrate(conf *config) {
 }
 
 func startServer(conf *config) {
+	log.Printf("Starting http server: %s", time.Now())
 	c := &context{
 		conf: conf,
 	}
@@ -178,6 +186,7 @@ func startServer(conf *config) {
 }
 
 func (c *context) Status(w http.ResponseWriter, r *http.Request) {
+	log.Printf("Status request: %s", time.Now())
 	resp := statusResponse{
 		Ok:       true,
 		Status:   "ok",
