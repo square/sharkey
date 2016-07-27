@@ -34,6 +34,7 @@ import (
 	"gopkg.in/yaml.v2"
 
 	"github.com/go-sql-driver/mysql"
+	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -171,6 +172,7 @@ func startServer(conf *config) {
 	handler.Path("/enroll/{hostname}").Methods("POST").HandlerFunc(c.Enroll)
 	handler.Path("/known_hosts").Methods("GET").HandlerFunc(c.KnownHosts)
 	handler.Path("/_status").Methods("GET").HandlerFunc(c.Status)
+	loggingHandler := handlers.LoggingHandler(os.Stderr, handler)
 	tlsConfig, err := buildConfig(conf.TLS)
 	if err != nil {
 		log.Fatal(err)
@@ -178,14 +180,13 @@ func startServer(conf *config) {
 	server := &http.Server{
 		Addr:      conf.ListenAddr,
 		TLSConfig: tlsConfig,
-		Handler:   handler,
+		Handler:   loggingHandler,
 	}
 
 	log.Fatal(server.ListenAndServeTLS(conf.TLS.Cert, conf.TLS.Key))
 }
 
 func (c *context) Status(w http.ResponseWriter, r *http.Request) {
-	log.Print("Status request")
 	resp := statusResponse{
 		Ok:       true,
 		Status:   "ok",

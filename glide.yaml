@@ -8,4 +8,7 @@ import:
   - ssh
 - package: gopkg.in/alecthomas/kingpin.v2
 - package: gopkg.in/yaml.v2
-- package: bitbucket.org/liamstask/goose/lib/goose
+- package: bitbucket.org/liamstask/goose
+  subpackages:
+  - lib/goose
+- package: github.com/gorilla/handlers
