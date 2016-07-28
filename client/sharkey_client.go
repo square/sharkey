@@ -142,9 +142,17 @@ func (c *context) enroll() {
 		log.Println(err)
 		return
 	}
-	err = exec.Command("/usr/bin/sudo", "/bin/mv", tmp.Name(), c.conf.SignedCert).Run()
+	raw, err := exec.Command("/usr/bin/sudo", "/bin/mv", tmp.Name(), c.conf.SignedCert).CombinedOutput()
 	if err != nil {
-		log.Println(err)
+		// Capture stdout/stderr for debugging errors
+		var output string
+		if raw != nil {
+			output = string(raw)
+		} else {
+			output = "no output"
+		}
+		log.Printf("Failed to move file: %s (output: %s)", err, output)
+		return
 	}
 }
 
@@ -182,9 +190,17 @@ func (c *context) makeKnownHosts() {
 		log.Println(err)
 		return
 	}
-	err = exec.Command("/usr/bin/sudo", "/bin/mv", tmp.Name(), c.conf.KnownHosts).Run()
+	raw, err := exec.Command("/usr/bin/sudo", "/bin/mv", tmp.Name(), c.conf.KnownHosts).CombinedOutput()
 	if err != nil {
-		log.Println(err)
+		// Capture stdout/stderr for debugging errors
+		var output string
+		if raw != nil {
+			output = string(raw)
+		} else {
+			output = "no output"
+		}
+		log.Printf("Failed to move file: %s (output: %s)", err, output)
+		return
 	}
 }
 
