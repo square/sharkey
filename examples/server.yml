@@ -1,0 +1,41 @@
+# SQLite database
+# ---
+db:
+  address: /path/to/sharkey.db
+  type: sqlite
+
+# MySQL database
+# ---
+# db:
+#   username: root
+#   password: password
+#   address: hostname:port
+#   schema: ssh_ca
+#   type: mysql
+#   tls:                                       # MySQL TLS config (optional)
+#     ca: /path/to/mysql-ca-bundle.pem
+#     cert: /path/to/mysql-client-cert.pem     # MySQL client cert
+#     key: /path/to/mysql-client-cert-key.pem  # MySQL client cert key
+#     min_version: 1.2                         # Min. TLS version
+
+# Server listening address
+listen_addr: "0.0.0.0:8080"
+
+# TLS config for serving requests
+# ---
+tls:
+  ca: /path/to/ca-bundle.pem
+  cert: /path/to/server-certificate.pem 
+  key: /path/to/server-certificate-key.pem
+  min_version: 1.2                             # Min. TLS version (optional) 
+
+# Signing key (from ssh-keygen)
+signing_key: /path/to/ca-signing-key 
+
+# Lifetime/validity duration for generated host certificates
+cert_duration: 168h
+
+# Optional suffix to strip from client hostnames when generating certificates.
+# This is useful if all your machines have a common TLD/domain that you don't
+# want to include in generated certificates. Leave empty to disable.
+strip_suffix: ".squareup.com"

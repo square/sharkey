@@ -1,0 +1,3 @@
+SHARKEY_CONFIG=/etc/sharkey/server.yml
+SHARKEY_MIGRATIONS=/etc/sharkey/db/sqlite
+#SHARKEY_MIGRATIONS=/etc/sharkey/db/mysql

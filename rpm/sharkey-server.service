@@ -1,0 +1,12 @@
+[Unit]
+Description=Sharkey Server
+
+[Service]
+EnvironmentFile=/etc/sysconfig/sharkey-server
+ExecStartPre=/usr/sbin/sharkey-server --config=${SHARKEY_CONFIG} migrate --migrations=${SHARKEY_MIGRATIONS}
+ExecStart=/usr/sbin/sharkey-server --config=${SHARKEY_CONFIG} start
+Restart=on-failure
+User=sharkey
+
+[Install]
+WantedBy=multi-user.target
