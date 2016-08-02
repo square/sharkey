@@ -3,16 +3,15 @@
 %global _dwz_low_mem_die_limit 0
 %define function gobuild { go build -a -ldflags "-B 0x$(head -c20 /dev/urandom|od -An -tx1|tr -d ' \n')" -v -x "$@"; }
 
-Name:		sharkey
+Name:       sharkey
 Version:    0
-Release:    0.0.git%{shortrev}%{?dist}
-License:	Apache
-Summary:	Sharkey is a service for managing certificates for use by OpenSSH
-Url:		https://github.com/square/sharkey
-Group:		System/Security
-Source0:	https://github.com/square/%{name}/archive/%{rev}.tar.gz#/%{name}-%{rev}.tar.gz
-Requires:	openssh
-Requires(pre): shadow-utils
+Release:    0.1.git%{shortrev}%{?dist}
+License:    ASL 2.0
+Summary:    Sharkey is a service for managing certificates for use by OpenSSH
+Url:        https://github.com/square/sharkey
+Source0:    https://github.com/square/%{name}/archive/%{rev}.tar.gz#/%{name}-%{rev}.tar.gz
+Requires:   openssh
+Requires(pre):  shadow-utils
 
 # e.g. el6 has ppc64 arch without gcc-go, so EA tag is required
 ExclusiveArch:  %{?go_arches:%{go_arches}}%{!?go_arches:%{ix86} x86_64 %{arm}}
@@ -23,16 +22,16 @@ BuildRequires:  %{?go_compiler:compiler(go-compiler)}%{!?go_compiler:golang}
 Sharkey is a service for managing certificates for use by OpenSSH.
 
 %package server
-Summary:	Sharkey is a service for managing certificates for use by OpenSSH.
+Summary:    Sharkey is a service for managing certificates for use by OpenSSH.
 Version:    %{version}
-Group:      System/Security
+Group:      System Environment/Daemons
 %description server
 Sharkey-server is the server component to the Sharkey service for managing certificates for use by OpenSSH
 
 %package client
 Summary:    Sharkey is a service for managing certificates for use by OpenSSH.
 Version:    %{version}
-Group:      System/Security
+Group:      System Environment/Daemons
 %description client
 Sharkey-client is the client component to the Sharkey service for managing certificates for use by OpenSSH
 
@@ -124,6 +123,6 @@ rm -rf %{buildroot}
 %{_sysconfdir}/%{name}/client.yml.example
 
 %changelog
-* Wed Aug 01 2016 Ben Allen <bsallen@alcf.anl.gov> 
-- Initial release
+* Tue Aug 02 2016 Ben Allen <bsallen@alcf.anl.gov> - 0-0.1.gita6ec80f356d3
+- Initial RPM release
 
