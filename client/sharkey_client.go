@@ -84,7 +84,7 @@ func main() {
 	c.enroll()
 	c.makeKnownHosts()
 
-	if c.conf.Sleep == "" {
+	if c.conf.Sleep != "" {
 		sleep, err := time.ParseDuration(c.conf.Sleep)
 		if err != nil {
 			log.Fatalf("error parsing sleep duration: %s", err.Error())
