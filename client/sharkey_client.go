@@ -80,11 +80,11 @@ func main() {
 		log.Print("Generated http client")
 	}
 
-	if c.conf.Sleep == "" {
-		log.Print("Pinging server")
-		c.enroll()
-		c.makeKnownHosts()
-	} else {
+	log.Print("Pinging server")
+	c.enroll()
+	c.makeKnownHosts()
+
+	if c.conf.Sleep != "" {
 		sleep, err := time.ParseDuration(c.conf.Sleep)
 		if err != nil {
 			log.Fatalf("error parsing sleep duration: %s", err.Error())
