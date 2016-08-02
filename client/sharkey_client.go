@@ -34,7 +34,6 @@ import (
 var (
 	app        = kingpin.New("sharkey-client", "Certificate client of the ssh-ca system.")
 	configPath = kingpin.Flag("config", "Path to config file for client.").Required().String()
-	sudo       = kingpin.Flag("sudo", "Enable if elevated privileges needed to write cert/known_hosts.").Bool()
 )
 
 type tlsConfig struct {
@@ -48,6 +47,7 @@ type config struct {
 	SignedCert  string    `yaml:"signed_cert"`
 	KnownHosts  string    `yaml:"known_hosts"`
 	Sleep       string
+	Sudo        bool
 }
 
 type context struct {
@@ -143,21 +143,7 @@ func (c *context) enroll() {
 		log.Println(err)
 		return
 	}
-	raw, err := exec.Command("/bin/mv", tmp.Name(), c.conf.SignedCert).CombinedOutput()
-	if *sudo {
-		raw, err = exec.Command("/usr/bin/sudo", "/bin/mv", tmp.Name(), c.conf.SignedCert).CombinedOutput()
-	}
-	if err != nil {
-		// Capture stdout/stderr for debugging errors
-		var output string
-		if raw != nil {
-			output = string(raw)
-		} else {
-			output = "no output"
-		}
-		log.Printf("Failed to move file: %s (output: %s)", err, output)
-		return
-	}
+	c.shellOut([]string{"/usr/bin/sudo", "/bin/mv", tmp.Name(), c.conf.SignedCert})
 }
 
 func (c *context) makeKnownHosts() {
@@ -194,21 +180,7 @@ func (c *context) makeKnownHosts() {
 		log.Println(err)
 		return
 	}
-	raw, err := exec.Command("/bin/mv", tmp.Name(), c.conf.KnownHosts).CombinedOutput()
-	if *sudo {
-		raw, err = exec.Command("/usr/bin/sudo", "/bin/mv", tmp.Name(), c.conf.KnownHosts).CombinedOutput()
-	}
-	if err != nil {
-		// Capture stdout/stderr for debugging errors
-		var output string
-		if raw != nil {
-			output = string(raw)
-		} else {
-			output = "no output"
-		}
-		log.Printf("Failed to move file: %s (output: %s)", err, output)
-		return
-	}
+	c.shellOut([]string{"/bin/mv", tmp.Name(), c.conf.KnownHosts})
 }
 
 func (c *context) GenerateClient() error {
@@ -243,4 +215,22 @@ func buildConfig(caBundlePath string) (*tls.Config, error) {
 		ClientAuth: tls.RequireAndVerifyClientCert,
 		MinVersion: tls.VersionTLS12,
 	}, nil
+}
+
+func (c *context) shellOut(command []string) {
+	if c.conf.Sudo {
+		command = append([]string{"/usr/bin/sudo"}, command...)
+	}
+	cmd := exec.Cmd{
+		Path: command[0],
+		Args: command,
+	}
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	err := cmd.Run()
+	if err != nil {
+		log.Printf("Failed to execute query: %s with error: %s (output: %s)", command, stderr.Bytes, stdout.Bytes)
+	}
 }
