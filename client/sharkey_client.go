@@ -47,7 +47,7 @@ type config struct {
 	SignedCert  string    `yaml:"signed_cert"`
 	KnownHosts  string    `yaml:"known_hosts"`
 	Sleep       string
-	PingOnStart bool
+	PingOnStart bool `yaml:"ping_on_start"`
 }
 
 type context struct {
