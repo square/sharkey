@@ -84,17 +84,18 @@ func main() {
 	c.enroll()
 	c.makeKnownHosts()
 
-	sleep, err := time.ParseDuration(c.conf.Sleep)
-	if err != nil {
-		log.Fatalf("error parsing sleep duration: %s", err.Error())
+	if c.conf.Sleep == "" {
+		sleep, err := time.ParseDuration(c.conf.Sleep)
+		if err != nil {
+			log.Fatalf("error parsing sleep duration: %s", err.Error())
+		}
+		ticker := time.NewTicker(sleep)
+		for range ticker.C {
+			log.Print("Pinging server")
+			c.enroll()
+			c.makeKnownHosts()
+		}
 	}
-	ticker := time.NewTicker(sleep)
-	for range ticker.C {
-		log.Print("Pinging server")
-		c.enroll()
-		c.makeKnownHosts()
-	}
-
 }
 
 func (c *context) enroll() {
