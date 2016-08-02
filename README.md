@@ -165,6 +165,9 @@ Configuration (example):
     # How often to refresh/request new certificate
     sleep: "24h"
 
+    # Refresh/request new certificate on start
+    ping_on_start: true
+
 OpenSSH will have to be configured to read the signed host certificate (this is
 with the `HostCertificate` config option in `sshd_config`). If the signed host
 certificate is missing from disk, OpenSSH will fall back to TOFU with the
