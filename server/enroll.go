@@ -72,6 +72,7 @@ func (c *context) EnrollHost(hostname string, r *http.Request) (string, error) {
 	if rows.Next() {
 		newHost = false
 	}
+	rows.Close()
 	if newHost {
 		_, err = c.db.Exec("INSERT INTO hostkeys(hostname, pubkey) VALUES(?,?)", hostname, encodedPubkey)
 		if err != nil {
@@ -96,6 +97,7 @@ func (c *context) EnrollHost(hostname string, r *http.Request) (string, error) {
 			return "", err
 		}
 	}
+	rows.Close()
 	signedCert, err := c.signHost(hostname, uint64(id), pubkey)
 	if err != nil {
 		return "", err
