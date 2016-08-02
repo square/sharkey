@@ -47,6 +47,7 @@ type config struct {
 	SignedCert  string    `yaml:"signed_cert"`
 	KnownHosts  string    `yaml:"known_hosts"`
 	Sleep       string
+	PingOnStart bool
 }
 
 type context struct {
@@ -80,11 +81,13 @@ func main() {
 		log.Print("Generated http client")
 	}
 
-	if c.conf.Sleep == "" {
+	if c.conf.Sleep == "" || c.conf.PingOnStart {
 		log.Print("Pinging server")
 		c.enroll()
 		c.makeKnownHosts()
-	} else {
+	}
+
+	if c.conf.Sleep != "" {
 		sleep, err := time.ParseDuration(c.conf.Sleep)
 		if err != nil {
 			log.Fatalf("error parsing sleep duration: %s", err.Error())
