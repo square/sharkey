@@ -34,6 +34,7 @@ import (
 var (
 	app        = kingpin.New("sharkey-client", "Certificate client of the ssh-ca system.")
 	configPath = kingpin.Flag("config", "Path to config file for client.").Required().String()
+	sudo       = kingpin.Flag("sudo", "Enable if elevated privileges needed to write cert/known_hosts.").Bool()
 )
 
 type tlsConfig struct {
@@ -142,7 +143,10 @@ func (c *context) enroll() {
 		log.Println(err)
 		return
 	}
-	raw, err := exec.Command("/usr/bin/sudo", "/bin/mv", tmp.Name(), c.conf.SignedCert).CombinedOutput()
+	raw, err := exec.Command("/bin/mv", tmp.Name(), c.conf.SignedCert).CombinedOutput()
+	if *sudo {
+		raw, err = exec.Command("/usr/bin/sudo", "/bin/mv", tmp.Name(), c.conf.SignedCert).CombinedOutput()
+	}
 	if err != nil {
 		// Capture stdout/stderr for debugging errors
 		var output string
@@ -190,7 +194,10 @@ func (c *context) makeKnownHosts() {
 		log.Println(err)
 		return
 	}
-	raw, err := exec.Command("/usr/bin/sudo", "/bin/mv", tmp.Name(), c.conf.KnownHosts).CombinedOutput()
+	raw, err := exec.Command("/bin/mv", tmp.Name(), c.conf.KnownHosts).CombinedOutput()
+	if *sudo {
+		raw, err = exec.Command("/usr/bin/sudo", "/bin/mv", tmp.Name(), c.conf.KnownHosts).CombinedOutput()
+	}
 	if err != nil {
 		// Capture stdout/stderr for debugging errors
 		var output string
