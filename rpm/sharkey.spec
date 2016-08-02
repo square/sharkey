@@ -1,4 +1,4 @@
-%global rev             %(git show-ref -s HEAD)
+%global rev             %(git rev-parse HEAD)
 %global shortrev        %(r=%{rev}; echo ${r:0:12})
 %global _dwz_low_mem_die_limit 0
 %define function gobuild { go build -a -ldflags "-B 0x$(head -c20 /dev/urandom|od -An -tx1|tr -d ' \n')" -v -x "$@"; }
@@ -12,6 +12,7 @@ Url:		https://github.com/square/sharkey
 Group:		System/Security
 Source0:	https://github.com/square/%{name}/archive/%{rev}.tar.gz#/%{name}-%{rev}.tar.gz
 Requires:	openssh
+Requires(pre): shadow-utils
 
 # e.g. el6 has ppc64 arch without gcc-go, so EA tag is required
 ExclusiveArch:  %{?go_arches:%{go_arches}}%{!?go_arches:%{ix86} x86_64 %{arm}}
@@ -45,33 +46,35 @@ ln -s ../../../ src/github.com/square/sharkey
 %install
 export GOPATH=$(pwd):%{gopath}
 # Server
-%gobuild -o %{buildroot}%{_sbindir}/sharkey-server github.com/square/sharkey/server
+%gobuild -o %{buildroot}%{_sbindir}/%{name}-server github.com/square/sharkey/server
 
 install -d %{buildroot}%{_unitdir}
-install -m 0644 rpm/%{name}-server.service %{buildroot}%{_unitdir}/%{name}-server.service
+install -m 0644 rpm/sharkey-server.service %{buildroot}%{_unitdir}/%{name}-server.service
 install -d %{buildroot}/%{_sysconfdir}/sysconfig
-install -m 0644 rpm/%{name}-server.sysconfig %{buildroot}/%{_sysconfdir}/sysconfig/%{name}-server
+install -m 0644 rpm/sharkey-server.sysconfig %{buildroot}/%{_sysconfdir}/sysconfig/%{name}-server
 install -d %{buildroot}%{_sysconfdir}/sharkey
-install -m 0644 examples/server.yml %{buildroot}%{_sysconfdir}/sharkey/server.yml.example
+install -m 0644 examples/server.yml %{buildroot}%{_sysconfdir}/%{name}/server.yml.example
 cp -r db %{buildroot}%{_sysconfdir}/sharkey/
 
 # Client
-%gobuild -o %{buildroot}%{_sbindir}/sharkey-client github.com/square/sharkey/client
-install -m 0644 rpm/%{name}-client.service %{buildroot}%{_unitdir}/%{name}-client.service
-install -m 0644 rpm/%{name}-client.sysconfig %{buildroot}/%{_sysconfdir}/sysconfig/%{name}-client
-install -m 0644 examples/client.yml %{buildroot}%{_sysconfdir}/sharkey/client.yml.example
+%gobuild -o %{buildroot}%{_sbindir}/%{name}-client github.com/square/sharkey/client
+install -m 0644 rpm/sharkey-client.service %{buildroot}%{_unitdir}/%{name}-client.service
+install -m 0644 rpm/sharkey-client.sysconfig %{buildroot}/%{_sysconfdir}/sysconfig/%{name}-client
+install -m 0644 examples/client.yml %{buildroot}%{_sysconfdir}/%{name}/client.yml.example
 
 %pre server
-if ! /usr/bin/getent passwd sharkey &>/dev/null
-then
-    useradd --system --shell /sbin/nologin --home-dir %{_sysconfdir}/sharkey --user-group --comment "Sharkey user" --no-create-home sharkey
-fi
+getent group sharkey >/dev/null || groupadd -r sharkey
+getent passwd sharkey >/dev/null || \
+    useradd --system --gid sharkey --shell /sbin/nologin --home-dir %{_sysconfdir}/%{name} \
+    --comment "Sharkey server user" sharkey
+exit 0
 
 %pre client
-if ! /usr/bin/getent passwd sharkey &>/dev/null
-then
-    useradd --system --shell /sbin/nologin --home-dir %{_sysconfdir}/sharkey --user-group --comment "Sharkey user" --no-create-home sharkey
-fi
+getent group sharkey-client >/dev/null || groupadd -r sharkey-client
+getent passwd sharkey-client >/dev/null || \
+    useradd --system --gid sharkey-client --shell /sbin/nologin --home-dir %{_sysconfdir}/%{name} \
+    --comment "Sharkey client user" sharkey-client
+exit 0
 
 %post server
 /usr/bin/systemctl daemon-reload >/dev/null 2>&1
@@ -109,16 +112,16 @@ rm -rf %{buildroot}
 %{_sbindir}/%{name}-server
 %{_unitdir}/%{name}-server.service
 %config %{_sysconfdir}/sysconfig/%{name}-server
-%{_sysconfdir}/sharkey/server.yml.example
-%{_sysconfdir}/sharkey/db/mysql/migrations/*
-%{_sysconfdir}/sharkey/db/sqlite/migrations/*
+%{_sysconfdir}/%{name}/server.yml.example
+%{_sysconfdir}/%{name}/db/mysql/migrations/*
+%{_sysconfdir}/%{name}/db/sqlite/migrations/*
 
 %files client
 %defattr(-,root,root,-)
 %{_sbindir}/%{name}-client
 %{_unitdir}/%{name}-client.service
 %config %{_sysconfdir}/sysconfig/%{name}-client
-%{_sysconfdir}/sharkey/client.yml.example
+%{_sysconfdir}/%{name}/client.yml.example
 
 %changelog
 * Wed Aug 01 2016 Ben Allen <bsallen@alcf.anl.gov> 

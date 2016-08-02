@@ -6,7 +6,7 @@ set -o pipefail
 
 DIR=$(dirname $(readlink -f $0))
 
-rev=$(git show-ref -s HEAD)
+rev=$(git rev-parse HEAD)
 
 tar -C "${DIR}/../.." -zcf ~/rpmbuild/SOURCES/sharkey-${rev}.tar.gz --transform s/sharkey/sharkey-${rev}/ sharkey
 rpmbuild -ba ${DIR}/sharkey.spec
