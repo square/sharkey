@@ -167,7 +167,7 @@ Configuration (example):
 
     # Path to sudo binary on client host
     # Uses sudo to write known_hosts and signed_cert.pub if this field specified
-    Sudo: "/usr/bin/sudo"
+    sudo: "/usr/bin/sudo"
 
 OpenSSH will have to be configured to read the signed host certificate (this is
 with the `HostCertificate` config option in `sshd_config`). If the signed host

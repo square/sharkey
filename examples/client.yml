@@ -21,4 +21,4 @@ known_hosts: /etc/ssh/known_hosts
 sleep: "24h"
 
 # Path to sudo binary
-Sudo: "/usr/bin/sudo"
+sudo: "/usr/bin/sudo"
