@@ -19,3 +19,6 @@ known_hosts: /etc/ssh/known_hosts
 
 # How often to refresh/request new certificate
 sleep: "24h"
+
+# Path to sudo binary
+Sudo: "/usr/bin/sudo"
