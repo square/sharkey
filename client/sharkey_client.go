@@ -47,7 +47,7 @@ type config struct {
 	SignedCert  string    `yaml:"signed_cert"`
 	KnownHosts  string    `yaml:"known_hosts"`
 	Sleep       string
-	Sudo        bool
+	Sudo        string
 }
 
 type context struct {
@@ -143,7 +143,7 @@ func (c *context) enroll() {
 		log.Println(err)
 		return
 	}
-	c.shellOut([]string{"/usr/bin/sudo", "/bin/mv", tmp.Name(), c.conf.SignedCert})
+	c.shellOut([]string{"/bin/mv", tmp.Name(), c.conf.SignedCert})
 }
 
 func (c *context) makeKnownHosts() {
@@ -218,8 +218,8 @@ func buildConfig(caBundlePath string) (*tls.Config, error) {
 }
 
 func (c *context) shellOut(command []string) {
-	if c.conf.Sudo {
-		command = append([]string{"/usr/bin/sudo"}, command...)
+	if c.conf.Sudo != "" {
+		command = append([]string{c.conf.Sudo}, command...)
 	}
 	cmd := exec.Cmd{
 		Path: command[0],
