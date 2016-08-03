@@ -82,13 +82,16 @@ func TestEnrollHost(t *testing.T) {
 		t.Fatalf("Error generating context: %s", err.Error())
 	}
 	defer c.db.Close()
-	request, err := generateRequest()
-	if err != nil {
-		t.Fatalf("Error reading test ssh key: %s", err.Error())
-	}
-	_, err = c.EnrollHost("goodname", request)
-	if err != nil {
-		t.Fatalf("Error enrolling host: %s", err.Error())
+
+	for i := 0; i < 5; i++ {
+		request, err := generateRequest()
+		if err != nil {
+			t.Fatalf("Error reading test ssh key: %s", err.Error())
+		}
+		_, err = c.EnrollHost("goodname", request)
+		if err != nil {
+			t.Fatalf("Error enrolling host: %s", err.Error())
+		}
 	}
 }
 
