@@ -47,6 +47,7 @@ type config struct {
 	SignedCert  string    `yaml:"signed_cert"`
 	KnownHosts  string    `yaml:"known_hosts"`
 	Sleep       string
+	Sudo        string
 }
 
 type context struct {
@@ -142,18 +143,7 @@ func (c *context) enroll() {
 		log.Println(err)
 		return
 	}
-	raw, err := exec.Command("/usr/bin/sudo", "/bin/mv", tmp.Name(), c.conf.SignedCert).CombinedOutput()
-	if err != nil {
-		// Capture stdout/stderr for debugging errors
-		var output string
-		if raw != nil {
-			output = string(raw)
-		} else {
-			output = "no output"
-		}
-		log.Printf("Failed to move file: %s (output: %s)", err, output)
-		return
-	}
+	c.shellOut([]string{"/bin/mv", tmp.Name(), c.conf.SignedCert})
 }
 
 func (c *context) makeKnownHosts() {
@@ -190,18 +180,7 @@ func (c *context) makeKnownHosts() {
 		log.Println(err)
 		return
 	}
-	raw, err := exec.Command("/usr/bin/sudo", "/bin/mv", tmp.Name(), c.conf.KnownHosts).CombinedOutput()
-	if err != nil {
-		// Capture stdout/stderr for debugging errors
-		var output string
-		if raw != nil {
-			output = string(raw)
-		} else {
-			output = "no output"
-		}
-		log.Printf("Failed to move file: %s (output: %s)", err, output)
-		return
-	}
+	c.shellOut([]string{"/bin/mv", tmp.Name(), c.conf.KnownHosts})
 }
 
 func (c *context) GenerateClient() error {
@@ -236,4 +215,22 @@ func buildConfig(caBundlePath string) (*tls.Config, error) {
 		ClientAuth: tls.RequireAndVerifyClientCert,
 		MinVersion: tls.VersionTLS12,
 	}, nil
+}
+
+func (c *context) shellOut(command []string) {
+	if c.conf.Sudo != "" {
+		command = append([]string{c.conf.Sudo}, command...)
+	}
+	cmd := exec.Cmd{
+		Path: command[0],
+		Args: command,
+	}
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	err := cmd.Run()
+	if err != nil {
+		log.Printf("Failed to execute query: %s with error: %s (output: %s)", command, stderr.Bytes, stdout.Bytes)
+	}
 }
