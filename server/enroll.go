@@ -18,6 +18,7 @@ package main
 
 import (
 	"crypto/rand"
+	"database/sql"
 	"encoding/base64"
 	"io/ioutil"
 	"log"
@@ -64,40 +65,48 @@ func (c *context) EnrollHost(hostname string, r *http.Request) (string, error) {
 	}
 
 	// Update table with host
-	rows, err := c.db.Query("SELECT id FROM hostkeys WHERE hostname=?", hostname)
+	rows, err := c.db.Query("SELECT id, pubkey FROM hostkeys WHERE hostname=?", hostname)
 	if err != nil {
 		return "", err
 	}
 	newHost := true
+	var dbID int64
+	var dbPubkey string
+
 	if rows.Next() {
-		newHost = false
-	}
-	rows.Close()
-	if newHost {
-		_, err = c.db.Exec("INSERT INTO hostkeys(hostname, pubkey) VALUES(?,?)", hostname, encodedPubkey)
+		err = rows.Scan(&dbID, &dbPubkey)
 		if err != nil {
 			return "", err
 		}
-	} else {
-		_, err = c.db.Exec("UPDATE hostkeys SET pubkey=? WHERE hostname=?", encodedPubkey, hostname)
+		newHost = false
+	}
+	rows.Close()
+
+	var result sql.Result
+
+	if newHost {
+		result, err = c.db.Exec("INSERT INTO hostkeys(hostname, pubkey) VALUES(?,?)", hostname, encodedPubkey)
+		if err != nil {
+			return "", err
+		}
+	} else if dbPubkey != encodedPubkey {
+		_, err = c.db.Exec("UPDATE hostkeys SET pubkey=? WHERE id=?", encodedPubkey, dbID)
 		if err != nil {
 			return "", err
 		}
 	}
 
-	// Get id to use for serial number
-	rows, err = c.db.Query("SELECT id FROM hostkeys WHERE hostname=?", hostname)
-	if err != nil {
-		return "", err
-	}
-	var id uint64
-	for rows.Next() {
-		err = rows.Scan(&id)
+	var id int64
+
+	if result != nil {
+		id, err = result.LastInsertId()
 		if err != nil {
 			return "", err
 		}
+	} else {
+		id = dbID
 	}
-	rows.Close()
+
 	signedCert, err := c.signHost(hostname, uint64(id), pubkey)
 	if err != nil {
 		return "", err
