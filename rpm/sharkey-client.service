@@ -1,0 +1,11 @@
+[Unit]
+Description=Sharkey Client
+
+[Service]
+EnvironmentFile=/etc/sysconfig/sharkey-client
+ExecStart=/usr/sbin/sharkey-client --config=${SHARKEY_CONFIG}
+Restart=on-failure
+User=sharkey-client
+
+[Install]
+WantedBy=multi-user.target
