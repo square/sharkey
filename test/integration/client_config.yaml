@@ -1,0 +1,10 @@
+---
+tls:
+  ca: /build/test/tls/CertAuth.crt
+  cert: /build/test/tls/client.crt
+  key: /build/test/tls/client.key
+request_addr: "https://server:8080"
+host_key: /etc/ssh/ssh_host_rsa_key.pub
+signed_cert: /etc/ssh/signed_cert.pub
+known_hosts: /etc/ssh/known_hosts
+sleep: "2s"

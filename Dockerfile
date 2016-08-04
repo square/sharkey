@@ -4,7 +4,7 @@
 #   docker build --rm -t square/sharkey-server .
 #
 # Basic usage:
-#   docker run -e SHARKEY_CONFIG=/path/to/config square/sharkey-server
+#   docker run -e SHARKEY_CONFIG=/path/to/config -e SHARKEY_MIGRATIONS=/path/to/migration/dir square/sharkey-server
 #
 # This image only contains the server component of sharkey,
 # the client will have to be deployed separately

@@ -12,7 +12,8 @@ go:
 install:
   - go build -o sharkey-server -v ./server
   - go build -o sharkey-client -v ./client
-  - docker build -t square/sharkey-server .
+  - docker build -t server -f Dockerfile .
+  - docker build -t client -f DockerfileClientTest .
 
 script:
   # Unit tests
