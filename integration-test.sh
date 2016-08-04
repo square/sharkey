@@ -4,53 +4,38 @@ set -e
 set -o pipefail
 
 BUILD_CONTEXT=/build
-SHARKEY_CONFIG="${BUILD_CONTEXT}/test/docker/server_config.yaml"
-DOCKER_IP="127.0.0.1"
+SERVER_CONFIG="${BUILD_CONTEXT}/test/integration/server_config.yaml"
+MIGRATION_CONFIG="${BUILD_CONTEXT}/db/sqlite"
+CLIENT_CONFIG="${BUILD_CONTEXT}/test/integration/client_config.yaml"
 
-if which docker-machine; then
-  # Assuming docker is running on a remote host instead of locally,
-  # for example in a virtual machine for OS X setups. 
-  DOCKER_IP=$(docker-machine ip)
-fi
+echo Starting sharkey server container
 
-echo "Setting up new container database"
-
-# Setup database
-docker run \
-  -v "$PWD":"$BUILD_CONTEXT" \
-  -e SHARKEY_CONFIG="$SHARKEY_CONFIG" \
-  square/sharkey-server migrate --migrations=/build/db/sqlite
-
-echo "Launching docker container for server"
-
-# Run sharkey server (in background)
-CONTAINER_ID=$(docker run \
-  -d -p 8080:8080 \
-  -v "$PWD":"$BUILD_CONTEXT" \
-  -e SHARKEY_CONFIG="$SHARKEY_CONFIG" \
-  square/sharkey-server start)
-
-echo "Running sharkey in container: $CONTAINER_ID"
-
-# Setup cleanup hook
-function cleanup {
-  echo "Killing docker container"
-  docker kill "$CONTAINER_ID"
-}
-trap cleanup EXIT
-
-# Wait for server to be ready
+# Start server
+docker run -d \
+	--name=server \
+	-v "$PWD":"$BUILD_CONTEXT" \
+	-e SHARKEY_CONFIG="$SERVER_CONFIG" \
+	-e SHARKEY_MIGRATIONS="$MIGRATION_CONFIG" \
+	server start
 sleep 5
 
-# Connect to server status endpoint
-wget -O status.out \
-  --no-check-certificate \
-  --ca-certificate test/tls/CertAuth.crt \
-  --certificate test/tls/testCert.crt \
-  --private-key test/tls/testCert.key \
-  "https://${DOCKER_IP}:8080/_status"
+echo Starting sharkey client container
 
-echo "Status results:"
-jq . < status.out
+#Start client
+docker run -d \
+	--name client \
+	-v "$PWD":"$BUILD_CONTEXT" \
+	-e SHARKEY_CONFIG="$CLIENT_CONFIG" \
+	-p 14296:22 \
+	--link server \
+	--hostname client \
+	client
 
-# TODO(cs): add client component to integration test
+echo Attempting to ssh into client container
+
+# try sshing into container
+sleep 5
+echo "127.0.0.1 client" | sudo tee -a /etc/hosts
+chmod 600 test/integration/id_rsa
+ssh -p 14296 -o "BatchMode yes" -o "UserKnownHostsFile=test/integration/known_hosts" -i test/integration/id_rsa root@client echo bleh
+echo exit code: $?

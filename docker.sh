@@ -7,4 +7,8 @@ if [ -z "$SHARKEY_CONFIG" ]; then
     exit 1
 fi
 
+if ! [ -z "$SHARKEY_MIGRATIONS" ]; then
+	/usr/bin/sharkey-server migrate --config="$SHARKEY_CONFIG" --migrations="$SHARKEY_MIGRATIONS"
+fi
+
 exec /usr/bin/sharkey-server --config="$SHARKEY_CONFIG" "$@"
