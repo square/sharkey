@@ -170,6 +170,7 @@ Configuration (example):
     sudo: "/usr/bin/sudo"
 
     # Command to restart ssh daemon for the host
+    # If sudo is set as well, this command will be prefixed with 'sudo'
     ssh_reload: ["service", "ssh", "restart"]
 
 OpenSSH will have to be configured to read the signed host certificate (this is
