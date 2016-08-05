@@ -144,6 +144,7 @@ func (c *context) enroll() {
 		return
 	}
 	c.shellOut([]string{"/bin/mv", tmp.Name(), c.conf.SignedCert})
+	c.shellOut([]string{"service", "ssh", "restart"})
 }
 
 func (c *context) makeKnownHosts() {
