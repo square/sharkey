@@ -48,6 +48,7 @@ type config struct {
 	KnownHosts  string    `yaml:"known_hosts"`
 	Sleep       string
 	Sudo        string
+	SshReload   []string `yaml:"ssh_reload"`
 }
 
 type context struct {
@@ -144,6 +145,7 @@ func (c *context) enroll() {
 		return
 	}
 	c.shellOut([]string{"/bin/mv", tmp.Name(), c.conf.SignedCert})
+	c.shellOut(c.conf.SshReload)
 }
 
 func (c *context) makeKnownHosts() {
@@ -218,6 +220,9 @@ func buildConfig(caBundlePath string) (*tls.Config, error) {
 }
 
 func (c *context) shellOut(command []string) {
+	if len(command) == 0 {
+		return
+	}
 	if c.conf.Sudo != "" {
 		command = append([]string{c.conf.Sudo}, command...)
 	}

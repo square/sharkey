@@ -9,3 +9,4 @@ signed_cert: test/ssh/signed_cert.pub
 known_hosts: test/ssh/known_hosts
 sleep: "2s"
 sudo: "/usr/bin/sudo"
+ssh_reload: ["service", "ssh", "restart"]
