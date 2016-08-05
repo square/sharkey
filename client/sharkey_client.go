@@ -48,6 +48,7 @@ type config struct {
 	KnownHosts  string    `yaml:"known_hosts"`
 	Sleep       string
 	Sudo        string
+	SshReload   []string `yaml:"ssh_reload"`
 }
 
 type context struct {
@@ -144,7 +145,7 @@ func (c *context) enroll() {
 		return
 	}
 	c.shellOut([]string{"/bin/mv", tmp.Name(), c.conf.SignedCert})
-	c.shellOut([]string{"service", "ssh", "restart"})
+	c.shellOut(c.conf.SshReload)
 }
 
 func (c *context) makeKnownHosts() {
