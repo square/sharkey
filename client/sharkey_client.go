@@ -220,6 +220,9 @@ func buildConfig(caBundlePath string) (*tls.Config, error) {
 }
 
 func (c *context) shellOut(command []string) {
+	if len(command) == 0 {
+		return
+	}
 	if c.conf.Sudo != "" {
 		command = append([]string{c.conf.Sudo}, command...)
 	}
