@@ -24,4 +24,5 @@ sleep: "24h"
 sudo: "/usr/bin/sudo"
 
 # Command to restart ssh
+# If sudo is set as well, this command will be prefixed with 'sudo'
 ssh_reload: ["service", "ssh", "restart"]
