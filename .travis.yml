@@ -10,10 +10,12 @@ go:
   - 1.6
 
 install:
+  - sudo apt-get install -y rpm
   - go build -o sharkey-server -v ./server
   - go build -o sharkey-client -v ./client
   - docker build -t server -f Dockerfile .
   - docker build -t client -f DockerfileClientTest .
+  - rpmbuild -ba rpm/sharkey.spec
 
 script:
   # Unit tests
