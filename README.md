@@ -96,8 +96,9 @@ Configuration (example):
     cert_duration: 168h
 
     # Optional suffix to strip from client hostnames when generating certificates.
-    # This is useful if all your machines have a common TLD/domain that you don't
-    # want to include in generated certificates. Leave empty to disable.
+    # This is useful if all your machines have a common TLD/domain, and you want to
+    # include an alias in the generated certificate that doesn't include that suffix.
+    # Leave empty to disable
     strip_suffix: ".example.com"
 
 A signing key for generating host certificates can be generated with `ssh-keygen`.
