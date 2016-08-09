@@ -236,6 +236,6 @@ func (c *context) shellOut(command []string) {
 	cmd.Stderr = &stderr
 	err := cmd.Run()
 	if err != nil {
-		log.Printf("Failed to execute query: %s with error: %s (output: %s)", command, stderr.Bytes, stdout.Bytes)
+		log.Printf("Failed to execute query: %s with error: %s (output: %s)", command, stderr.Bytes(), stdout.Bytes())
 	}
 }
