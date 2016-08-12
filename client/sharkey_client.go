@@ -57,43 +57,37 @@ type context struct {
 }
 
 func main() {
-	log.Print("Starting client")
+	log.Println("Starting client")
 	kingpin.Version("0.0.1")
 	kingpin.Parse()
 	data, err := ioutil.ReadFile(*configPath)
 	if err != nil {
-		log.Fatalf("error reading config file: %s", err.Error())
-	} else {
-		log.Print("Read in config file")
+		log.Fatalf("Error reading config file: %s\n", err)
 	}
 
 	var conf config
 	if err := yaml.Unmarshal(data, &conf); err != nil {
-		log.Fatalf("error parsing config file: %s", err.Error())
-	} else {
-		log.Print("Unmarshalled yaml config")
+		log.Fatalf("Error parsing config file: %s\n", err)
 	}
 	c := &context{
 		conf: &conf,
 	}
 	if err = c.GenerateClient(); err != nil {
-		log.Fatalf("error generating http client: %s", err.Error())
-	} else {
-		log.Print("Generated http client")
+		log.Fatalf("Error generating http client: %s\n", err)
 	}
 
-	log.Print("Pinging server")
+	log.Println("Fetching updated SSH certificate from server")
 	c.enroll()
 	c.makeKnownHosts()
 
 	if c.conf.Sleep != "" {
 		sleep, err := time.ParseDuration(c.conf.Sleep)
 		if err != nil {
-			log.Fatalf("error parsing sleep duration: %s", err.Error())
+			log.Fatalf("Error parsing sleep duration: %s\n", err)
 		}
 		ticker := time.NewTicker(sleep)
 		for range ticker.C {
-			log.Print("Pinging server")
+			log.Println("Fetching updated SSH certificate from server")
 			c.enroll()
 			c.makeKnownHosts()
 		}
@@ -103,48 +97,51 @@ func main() {
 func (c *context) enroll() {
 	hostname, err := os.Hostname()
 	if err != nil {
-		log.Println(err)
-		return
+		// Should be impossible
+		panic(err)
 	}
 	url := c.conf.RequestAddr + "/enroll/" + hostname //host name of machine running on
 	hostkey, err := ioutil.ReadFile(c.conf.HostKey)   //path to host key
 	if err != nil {
-		log.Println(err)
+		log.Printf("Error reading host key at %s: %s", c.conf.HostKey, err)
 		return
 	}
 	resp, err := c.client.Post(url, "text/plain", bytes.NewReader(hostkey))
 	if err != nil {
-		log.Println(err)
+		log.Printf("Error talking to backend: %s\n", err)
 		return
 	}
 	defer resp.Body.Close()
-	str, err := ioutil.ReadAll(resp.Body)
+	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		log.Println(err)
+		log.Printf("Error reading response from server: %s\n", err)
 		return
 	}
 	if resp.StatusCode != 200 {
-		log.Println("error retrieving signed cert from server")
-		log.Println(string(str))
+		log.Printf("Error retrieving signed cert from server: %s\n", string(body))
 		return
 	}
 	tmp, err := ioutil.TempFile("", "sharkey-signed-cert")
 	if err != nil {
-		log.Println(err)
+		log.Printf("Error creating temp file: %s\n", err)
 		return
 	}
 	defer os.Remove(tmp.Name())
 	err = os.Chmod(tmp.Name(), 0666)
 	if err != nil {
-		log.Println(err)
+		log.Printf("Error calling chmod on %s: %s\n", tmp.Name(), err)
 		return
 	}
-	err = ioutil.WriteFile(tmp.Name(), str, 0666)
+	err = ioutil.WriteFile(tmp.Name(), body, 0666)
 	if err != nil {
-		log.Println(err)
+		log.Printf("Error writing to %s: %s\n", tmp.Name(), err)
 		return
 	}
+
+	log.Printf("Installing updated SSH certificate into %s\n", c.conf.SignedCert)
 	c.shellOut([]string{"/bin/mv", tmp.Name(), c.conf.SignedCert})
+
+	log.Println("Restarting SSH daemon to make it pick up new certificate")
 	c.shellOut(c.conf.SshReload)
 }
 
@@ -152,36 +149,37 @@ func (c *context) makeKnownHosts() {
 	url := c.conf.RequestAddr + "/known_hosts"
 	resp, err := c.client.Get(url)
 	if err != nil {
-		log.Println(err)
+		log.Printf("Error talking to backend: %s\n", err)
 		return
 	}
 	defer resp.Body.Close()
 	str, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		log.Println(err)
+		log.Printf("Error reading response body: %s\n", err)
 		return
 	}
 	if resp.StatusCode != 200 {
-		log.Println("error retrieving known hosts file from server")
-		log.Println(string(str))
+		log.Printf("Error retrieving known hosts file from server (got status %d)\n", resp.StatusCode)
 		return
 	}
 	tmp, err := ioutil.TempFile("", "sharkey-known-hosts")
 	if err != nil {
-		log.Println(err)
+		log.Printf("Error creating temp file: %s\n", err)
 		return
 	}
 	defer os.Remove(tmp.Name())
 	err = os.Chmod(tmp.Name(), 0666)
 	if err != nil {
-		log.Println(err)
+		log.Printf("Error calling chmod on %s: %s\n", tmp.Name(), err)
 		return
 	}
 	err = ioutil.WriteFile(tmp.Name(), str, 0666)
 	if err != nil {
-		log.Println(err)
+		log.Printf("Error writing to %s: %s\n", tmp.Name(), err)
 		return
 	}
+
+	log.Printf("Installing known_hosts file into %s\n", c.conf.KnownHosts)
 	c.shellOut([]string{"/bin/mv", tmp.Name(), c.conf.KnownHosts})
 }
 
@@ -236,6 +234,12 @@ func (c *context) shellOut(command []string) {
 	cmd.Stderr = &stderr
 	err := cmd.Run()
 	if err != nil {
-		log.Printf("Failed to execute query: %s with error: %s (output: %s)", command, stderr.Bytes(), stdout.Bytes())
+		log.Printf("Failed to execute command %s, failed with %s\n", command, err)
+		if len(stdout.Bytes()) > 0 {
+			log.Printf("Stdout: %s\n", stdout.Bytes())
+		}
+		if len(stderr.Bytes()) > 0 {
+			log.Printf("Stderr: %s\n", stderr.Bytes())
+		}
 	}
 }
