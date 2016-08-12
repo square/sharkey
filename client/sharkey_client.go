@@ -170,12 +170,12 @@ func (c *context) makeKnownHosts() {
 	defer os.Remove(tmp.Name())
 	err = os.Chmod(tmp.Name(), 0666)
 	if err != nil {
-		log.Printf("Error calling chmod on %s: %s", tmp.Name(), err)
+		log.Printf("Error calling chmod on %s: %s\n", tmp.Name(), err)
 		return
 	}
 	err = ioutil.WriteFile(tmp.Name(), str, 0666)
 	if err != nil {
-		log.Printf("Error writing to %s: %s", tmp.Name(), err)
+		log.Printf("Error writing to %s: %s\n", tmp.Name(), err)
 		return
 	}
 
