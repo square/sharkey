@@ -25,6 +25,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"strings"
 	"time"
 
 	"gopkg.in/alecthomas/kingpin.v2"
@@ -48,7 +49,7 @@ type config struct {
 	KnownHosts  string    `yaml:"known_hosts"`
 	Sleep       string
 	Sudo        string
-	SshReload   []string `yaml:"ssh_reload"`
+	SSHReload   []string `yaml:"ssh_reload"`
 }
 
 type context struct {
@@ -142,7 +143,7 @@ func (c *context) enroll() {
 	c.shellOut([]string{"/bin/mv", tmp.Name(), c.conf.SignedCert})
 
 	log.Println("Restarting SSH daemon to make it pick up new certificate")
-	c.shellOut(c.conf.SshReload)
+	c.shellOut(c.conf.SSHReload)
 }
 
 func (c *context) makeKnownHosts() {
@@ -232,6 +233,9 @@ func (c *context) shellOut(command []string) {
 	var stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
+
+	log.Printf("exec: '%s'\n", strings.Join(command, " "))
+
 	err := cmd.Run()
 	if err != nil {
 		log.Printf("Failed to execute command %s, failed with %s\n", command, err)
