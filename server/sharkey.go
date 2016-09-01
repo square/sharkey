@@ -68,12 +68,13 @@ var tlsVersionMap = map[string]uint16{
 }
 
 type config struct {
-	Database     databaseConfig `yaml:"db"`
-	TLS          tlsConfig      `yaml:"tls"`
-	SigningKey   string         `yaml:"signing_key"`
-	CertDuration string         `yaml:"cert_duration"`
-	ListenAddr   string         `yaml:"listen_addr"`
-	StripSuffix  string         `yaml:"strip_suffix"`
+	Database     databaseConfig      `yaml:"db"`
+	TLS          tlsConfig           `yaml:"tls"`
+	SigningKey   string              `yaml:"signing_key"`
+	CertDuration string              `yaml:"cert_duration"`
+	ListenAddr   string              `yaml:"listen_addr"`
+	StripSuffix  string              `yaml:"strip_suffix"`
+	Aliases      map[string][]string `yaml:"aliases"`
 }
 
 type statusResponse struct {
