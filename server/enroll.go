@@ -30,6 +30,10 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
+const (
+	sshHostCertificateType = 2
+)
+
 func (c *context) Enroll(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	hostname := vars["hostname"]
@@ -154,11 +158,14 @@ func (c *context) signHost(hostname string, serial uint64, pubkey ssh.PublicKey)
 	if c.conf.StripSuffix != "" && strings.HasSuffix(hostname, c.conf.StripSuffix) {
 		principals = append(principals, strings.TrimSuffix(hostname, c.conf.StripSuffix))
 	}
+	if aliases, ok := c.conf.Aliases[hostname]; ok {
+		principals = append(principals, aliases...)
+	}
 	template := ssh.Certificate{
 		Nonce:           nonce,
 		Key:             pubkey,
 		Serial:          serial,
-		CertType:        2, //specifies it's a host cert, not user cert
+		CertType:        sshHostCertificateType,
 		KeyId:           hostname,
 		ValidPrincipals: principals,
 		ValidAfter:      (uint64)(startTime.Unix()),

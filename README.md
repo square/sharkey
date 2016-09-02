@@ -101,6 +101,14 @@ Configuration (example):
     # Leave empty to disable
     strip_suffix: ".example.com"
 
+    # Optional set of aliases for hosts. If a hostname matches an alias entry, the
+    # listed principals will be added to its certificate. This is useful if you have
+    # special hosts that are accessed via CNAME records.
+    aliases:
+      "host.example.com":
+        - "alias1.example.com"
+        - "alias2.example.com"
+
 A signing key for generating host certificates can be generated with `ssh-keygen`.
 
 #### Database

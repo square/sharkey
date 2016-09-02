@@ -74,6 +74,17 @@ func TestSignHost(t *testing.T) {
 	if cert.Key != pubkey {
 		t.Fatal("Cert pubkey doesn't match")
 	}
+	assertPrincipal(t, cert.ValidPrincipals, "hostname.square")
+	assertPrincipal(t, cert.ValidPrincipals, "alias.square")
+}
+
+func assertPrincipal(t *testing.T, principals []string, expected string) {
+	for _, principal := range principals {
+		if principal == expected {
+			return
+		}
+	}
+	t.Errorf("cert is missing expected principal: %s", expected)
 }
 
 func TestEnrollHost(t *testing.T) {
@@ -118,6 +129,9 @@ func generateContext() (*context, error) {
 	conf := &config{
 		SigningKey:   "testdata/server_ca",
 		CertDuration: "160h",
+		Aliases: map[string][]string{
+			"hostname.square": []string{"alias.square"},
+		},
 	}
 
 	c := &context{

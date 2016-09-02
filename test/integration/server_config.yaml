@@ -9,3 +9,6 @@ tls:
 signing_key: /build/test/keys/server_ca
 cert_duration: 168h
 listen_addr: "0.0.0.0:8080"
+aliases:
+  "client":
+    - "localhost"
