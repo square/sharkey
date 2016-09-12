@@ -88,6 +88,10 @@ func main() {
 		}
 		ticker := time.NewTicker(sleep)
 		for range ticker.C {
+			if err = c.GenerateClient(); err != nil {
+				log.Fatalf("Error generating http client: %s\n", err)
+			}
+
 			log.Println("Fetching updated SSH certificate from server")
 			c.enroll()
 			c.makeKnownHosts()
