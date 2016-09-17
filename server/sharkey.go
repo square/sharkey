@@ -28,6 +28,8 @@ import (
 	"net/http"
 	"os"
 
+	"golang.org/x/crypto/ssh"
+
 	"bitbucket.org/liamstask/goose/lib/goose"
 
 	"gopkg.in/alecthomas/kingpin.v2"
@@ -84,8 +86,9 @@ type statusResponse struct {
 }
 
 type context struct {
-	db   *sql.DB
-	conf *config
+	signer ssh.Signer
+	db     *sql.DB
+	conf   *config
 }
 
 func main() {
@@ -161,7 +164,16 @@ func startServer(conf *config) {
 		conf: conf,
 	}
 
-	var err error
+	privateKey, err := ioutil.ReadFile(c.conf.SigningKey)
+	if err != nil {
+		log.Fatalf("unable to read signing key file: %s\n", err)
+	}
+
+	c.signer, err = ssh.ParsePrivateKey(privateKey)
+	if err != nil {
+		log.Fatalf("unable to parse signing key data: %s\n", err)
+	}
+
 	c.db, err = conf.getDB()
 	if err != nil {
 		log.Fatalf("unable to open database: %s\n", err)
@@ -172,6 +184,7 @@ func startServer(conf *config) {
 	handler := mux.NewRouter()
 	handler.Path("/enroll/{hostname}").Methods("POST").HandlerFunc(c.Enroll)
 	handler.Path("/known_hosts").Methods("GET").HandlerFunc(c.KnownHosts)
+	handler.Path("/authority").Methods("GET").HandlerFunc(c.Authority)
 	handler.Path("/_status").Methods("HEAD", "GET").HandlerFunc(c.Status)
 	loggingHandler := handlers.LoggingHandler(os.Stderr, handler)
 	tlsConfig, err := buildConfig(conf.TLS)
