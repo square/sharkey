@@ -109,6 +109,13 @@ Configuration (example):
         - "alias1.example.com"
         - "alias2.example.com"
 
+    # Optional set of extra entries to provide to clients when they fetch a known_hosts
+    # file. This is useful if you have externally-managed servers in your infrastructure
+    # that you want to tell clients about, of if you want to add CA entries to the
+    # known_hosts file.
+    extra_known_hosts:
+      - "@cert-authority *.example.com ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDBwhA8rKPESjDy4iqTlkBqUlBU2xjwtmFUHY6cutA9TYbB5H/mjxzUpnSNw/HyFWNpysjTSQtHWWBdJdJGU/0aDgFUwbduHeDFxviGVSkOxm2AYn7XJopzITZRqmAmsYXHUBa75RQb+UgIG7EpCoi8hF4ItJV+TT777j1irkXwlMmeDiJEaA+7bPNdUdGw8zRbk0CyeotYVD0griRtkXdfgnQAu+DvBwOuW/uiZaPz/rAVjt4b9fmp6pcFKI3RsBqqn5tQVhKCPVuSwqvIQ7CTVkMClYovlH1/zGe8PG1DHbM9irP98S5j3mVD9W5v3QILpsg24RIS14M8pLarlD6t root@authority"
+
 A signing key for generating host certificates can be generated with `ssh-keygen`.
 
 #### Database
