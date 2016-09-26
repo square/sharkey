@@ -27,6 +27,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -149,7 +150,11 @@ func TestGetKnownHosts(t *testing.T) {
 	if err != nil {
 		t.Fatal("Error getting known hosts")
 	}
-	if result != "hostname pubkey\n" {
+	results := strings.Split(result, "\n")
+	if results[0] != "@certificate-authority * pubkey" {
+		t.Fatal("Incorrect known hosts format")
+	}
+	if results[1] != "hostname pubkey" {
 		t.Fatal("Incorrect known hosts format")
 	}
 }
@@ -164,6 +169,9 @@ func generateContext() (*context, error) {
 		CertDuration: "160h",
 		Aliases: map[string][]string{
 			"hostname.square": []string{"alias.square"},
+		},
+		ExtraKnownHosts: []string{
+			"@certificate-authority * pubkey",
 		},
 	}
 

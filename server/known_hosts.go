@@ -37,6 +37,10 @@ func (c *context) KnownHosts(w http.ResponseWriter, r *http.Request) {
 
 func (c *context) GetKnownHosts() (string, error) {
 	var buffer bytes.Buffer
+	for _, entry := range c.conf.ExtraKnownHosts {
+		buffer.WriteString(entry)
+		buffer.WriteRune('\n')
+	}
 	rows, err := c.db.Query("SELECT * FROM hostkeys")
 	if err != nil {
 		return "", err
@@ -48,7 +52,10 @@ func (c *context) GetKnownHosts() (string, error) {
 		if err != nil {
 			return "", err
 		}
-		buffer.WriteString(hostname + " " + pubkey + "\n")
+		buffer.WriteString(hostname)
+		buffer.WriteRune(' ')
+		buffer.WriteString(pubkey)
+		buffer.WriteRune('\n')
 	}
 	return buffer.String(), nil
 }
