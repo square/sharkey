@@ -17,6 +17,7 @@
 package main
 
 import (
+	"bytes"
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
@@ -24,6 +25,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/http/httptest"
 	"os"
 	"testing"
 
@@ -106,6 +108,37 @@ func TestEnrollHost(t *testing.T) {
 	}
 }
 
+func TestGetAuthority(t *testing.T) {
+	c, err := generateContext()
+	if err != nil {
+		t.Fatalf("Error generating context: %s", err)
+	}
+	defer c.db.Close()
+
+	req, err := generateRequest()
+	if err != nil {
+		t.Fatalf("Error generating context: %s", err)
+	}
+
+	rec := httptest.NewRecorder()
+	c.Authority(rec, req)
+
+	rec.Flush()
+	if rec.Code != 200 {
+		t.Fatalf("Request to /authority failed with %d", rec.Code)
+	}
+
+	body, _ := ioutil.ReadAll(rec.Body)
+	expected, err := ioutil.ReadFile("testdata/server_ca.pub")
+	if err != nil {
+		t.Fatalf("Error reading testdata: %s", err)
+	}
+
+	if !bytes.Equal(body, expected) {
+		t.Fatalf("Request body from /authority unexpectedly returned '%s'", string(body))
+	}
+}
+
 func TestGetKnownHosts(t *testing.T) {
 	c, err := generateContext()
 	if err != nil {
@@ -134,9 +167,20 @@ func generateContext() (*context, error) {
 		},
 	}
 
+	key, err := ioutil.ReadFile(conf.SigningKey)
+	if err != nil {
+		return nil, err
+	}
+
+	signer, err := ssh.ParsePrivateKey(key)
+	if err != nil {
+		return nil, err
+	}
+
 	c := &context{
-		db:   db,
-		conf: conf,
+		signer: signer,
+		db:     db,
+		conf:   conf,
 	}
 	return c, nil
 }

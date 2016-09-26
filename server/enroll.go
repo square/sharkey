@@ -135,16 +135,8 @@ func clientHostnameMatches(hostname string, r *http.Request) bool {
 }
 
 func (c *context) signHost(hostname string, serial uint64, pubkey ssh.PublicKey) (*ssh.Certificate, error) {
-	privateKey, err := ioutil.ReadFile(c.conf.SigningKey)
-	if err != nil {
-		return nil, err
-	}
-	signer, err := ssh.ParsePrivateKey(privateKey)
-	if err != nil {
-		return nil, err
-	}
 	nonce := make([]byte, 32)
-	_, err = rand.Read(nonce)
+	_, err := rand.Read(nonce)
 	if err != nil {
 		return nil, err
 	}
@@ -172,6 +164,6 @@ func (c *context) signHost(hostname string, serial uint64, pubkey ssh.PublicKey)
 		ValidBefore:     (uint64)(endTime.Unix()),
 	}
 
-	template.SignCert(rand.Reader, signer)
+	template.SignCert(rand.Reader, c.signer)
 	return &template, nil
 }
