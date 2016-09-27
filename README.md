@@ -169,11 +169,14 @@ Configuration (example):
       cert: /path/to/client-certificate.pem 
       key: /path/to/client-certificate-key.pem
 
-    # OpenSSH host key (unsigned)
-    host_key: /etc/ssh/ssh_host_rsa_key.pub
-
-    # Where to install the signed host certificate
-    signed_cert: /etc/ssh/ssh_host_rsa_key_signed.pub
+    # List of host keys for OpenSSH server
+    host_keys:
+      # Here, 'key' is the public key, and 'cert' is where to install the signed cert
+      - plain: "/etc/ssh/ssh_host_rsa_key.pub"
+        signed: "/etc/ssh/ssh_host_rsa_key.cert"
+      # You can specify multiple host keys (e.g. if you have both RSA, ED25519 keys)
+      - plain: "/etc/ssh/ssh_host_ed25519_key.pub"
+        signed: "/etc/ssh/ssh_host_ed25519_key.cert"
 
     # Where to install the known_hosts file
     known_hosts: /etc/ssh/known_hosts

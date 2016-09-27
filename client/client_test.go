@@ -35,8 +35,8 @@ func TestEnroll(t *testing.T) {
 	}
 	defer cleanup(c)
 	defer ts.Close()
-	c.enroll()
-	data, err := ioutil.ReadFile(c.conf.SignedCert)
+	c.enroll(c.conf.HostKeys[0].HostKey, c.conf.HostKeys[0].SignedCert)
+	data, err := ioutil.ReadFile(c.conf.HostKeys[0].SignedCert)
 	if err != nil {
 		t.Fatalf("error reading signed cert: %s", err.Error())
 	}
@@ -78,9 +78,10 @@ func generateContext(url string) (*context, error) {
 
 	conf := &config{
 		RequestAddr: url,
-		HostKey:     "testdata/ssh_host_rsa_key.pub",
-		SignedCert:  signedCertTmp.Name(),
-		KnownHosts:  knownHostsTmp.Name(),
+		HostKeys: []hostKey{
+			{"testdata/ssh_host_rsa_key.pub", signedCertTmp.Name()},
+		},
+		KnownHosts: knownHostsTmp.Name(),
 	}
 	c := &context{
 		conf:   conf,

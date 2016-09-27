@@ -41,11 +41,17 @@ type tlsConfig struct {
 	Ca, Cert, Key string
 }
 
+type hostKey struct {
+	HostKey    string `yaml:"plain"`
+	SignedCert string `yaml:"signed"`
+}
+
 type config struct {
 	TLS         tlsConfig `yaml:"tls"`
 	RequestAddr string    `yaml:"request_addr"`
-	HostKey     string    `yaml:"host_key"`
-	SignedCert  string    `yaml:"signed_cert"`
+	HostKey     string    `yaml:"host_key"`    // deprecated
+	SignedCert  string    `yaml:"signed_cert"` // deprecated
+	HostKeys    []hostKey `yaml:"host_keys"`
 	KnownHosts  string    `yaml:"known_hosts"`
 	Sleep       string
 	Sudo        string
@@ -73,13 +79,26 @@ func main() {
 	c := &context{
 		conf: &conf,
 	}
+
+	if len(c.conf.HostKeys) == 0 {
+		// Support old host_key/signed_cert options
+		c.conf.HostKeys = []hostKey{
+			{c.conf.HostKey, c.conf.SignedCert},
+		}
+	} else if c.conf.HostKey != "" || c.conf.SignedCert != "" {
+		log.Fatalf("Options host_key/signed_cert and host_keys are mutually exclusive")
+	}
+
 	if err = c.GenerateClient(); err != nil {
 		log.Fatalf("Error generating http client: %s\n", err)
 	}
 
 	log.Println("Fetching updated SSH certificate from server")
-	c.enroll()
+	for _, entry := range c.conf.HostKeys {
+		c.enroll(entry.HostKey, entry.SignedCert)
+	}
 	c.makeKnownHosts()
+	c.reloadSSH()
 
 	if c.conf.Sleep != "" {
 		sleep, err := time.ParseDuration(c.conf.Sleep)
@@ -93,22 +112,25 @@ func main() {
 			}
 
 			log.Println("Fetching updated SSH certificate from server")
-			c.enroll()
+			for _, entry := range c.conf.HostKeys {
+				c.enroll(entry.HostKey, entry.SignedCert)
+			}
 			c.makeKnownHosts()
+			c.reloadSSH()
 		}
 	}
 }
 
-func (c *context) enroll() {
+func (c *context) enroll(hostKey string, signedCert string) {
 	hostname, err := os.Hostname()
 	if err != nil {
 		// Should be impossible
 		panic(err)
 	}
-	url := c.conf.RequestAddr + "/enroll/" + hostname //host name of machine running on
-	hostkey, err := ioutil.ReadFile(c.conf.HostKey)   //path to host key
+	url := c.conf.RequestAddr + "/enroll/" + hostname // host name of machine running on
+	hostkey, err := ioutil.ReadFile(hostKey)          // path to host key
 	if err != nil {
-		log.Printf("Error reading host key at %s: %s", c.conf.HostKey, err)
+		log.Printf("Error reading host key at %s: %s", hostKey, err)
 		return
 	}
 	resp, err := c.client.Post(url, "text/plain", bytes.NewReader(hostkey))
@@ -143,9 +165,11 @@ func (c *context) enroll() {
 		return
 	}
 
-	log.Printf("Installing updated SSH certificate into %s\n", c.conf.SignedCert)
-	c.shellOut([]string{"/bin/mv", tmp.Name(), c.conf.SignedCert})
+	log.Printf("Installing updated SSH certificate into %s\n", signedCert)
+	c.shellOut([]string{"/bin/mv", tmp.Name(), signedCert})
+}
 
+func (c *context) reloadSSH() {
 	log.Println("Restarting SSH daemon to make it pick up new certificate")
 	c.shellOut(c.conf.SSHReload)
 }
