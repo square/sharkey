@@ -63,7 +63,7 @@ func (c *context) EnrollHost(hostname string, r *http.Request) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	encodedPubkey := string(data)
+	encodedPubkey := strings.TrimLeft(string(data), "\n")
 	pubkey, _, _, _, err := ssh.ParseAuthorizedKey(data)
 	if err != nil {
 		return "", err
