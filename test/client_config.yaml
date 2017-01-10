@@ -4,8 +4,9 @@ tls:
   cert: test/tls/testCert.crt
   key: test/tls/testCert.key
 request_addr: "https://127.0.0.1:8080"
-host_key: test/ssh/ssh_host_rsa_key.pub
-signed_cert: test/ssh/signed_cert.pub
+host_keys:
+  - plain: "/etc/ssh/ssh_host_rsa_key.pub"
+    signed: "/etc/ssh/ssh_host_rsa_key-cert.pub"
 known_hosts: test/ssh/known_hosts
 sleep: "2s"
 sudo: "/usr/bin/sudo"
