@@ -6,7 +6,7 @@ tls:
 request_addr: "https://127.0.0.1:8080"
 host_keys:
   - plain: "/etc/ssh/ssh_host_rsa_key.pub"
-    signed: "/etc/ssh/ssh_host_rsa_key.cert"
+    signed: "/etc/ssh/ssh_host_rsa_key-cert.pub"
 known_hosts: test/ssh/known_hosts
 sleep: "2s"
 sudo: "/usr/bin/sudo"

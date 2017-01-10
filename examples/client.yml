@@ -12,10 +12,10 @@ tls:
 host_keys:
   # Here, 'key' is the public key, and 'cert' is where to install the signed cert
   - plain: "/etc/ssh/ssh_host_rsa_key.pub"
-    signed: "/etc/ssh/ssh_host_rsa_key.cert"
+    signed: "/etc/ssh/ssh_host_rsa_key-cert.pub"
   # You can specify multiple host keys (e.g. if you have both RSA, ED25519 keys)
   - plain: "/etc/ssh/ssh_host_ed25519_key.pub"
-    signed: "/etc/ssh/ssh_host_ed25519_key.cert"
+    signed: "/etc/ssh/ssh_host_ed25519_key-cert.pub"
 
 # Where to install the known_hosts file
 known_hosts: /etc/ssh/known_hosts

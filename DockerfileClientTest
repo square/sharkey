@@ -28,8 +28,8 @@ RUN cd /go/src/github.com/square/sharkey && \
     cp test/integration/client_entry.sh /usr/bin/entrypoint.sh && \
     chmod +x /usr/bin/entrypoint.sh
 
-RUN echo "HostCertificate /etc/ssh/ssh_host_rsa_key.cert" >> /etc/ssh/sshd_config
-RUN echo "HostCertificate /etc/ssh/ssh_host_ecdsa_key.cert" >> /etc/ssh/sshd_config
-RUN echo "HostCertificate /etc/ssh/ssh_host_ed25519_key.cert" >> /etc/ssh/sshd_config
+RUN echo "HostCertificate /etc/ssh/ssh_host_rsa_key-cert.pub" >> /etc/ssh/sshd_config
+RUN echo "HostCertificate /etc/ssh/ssh_host_ecdsa_key-cert.pub" >> /etc/ssh/sshd_config
+RUN echo "HostCertificate /etc/ssh/ssh_host_ed25519_key-cert.pub" >> /etc/ssh/sshd_config
 
 ENTRYPOINT ["/usr/bin/entrypoint.sh"]
