@@ -49,12 +49,6 @@ aliases:
     - "alias1.example.com"
     - "alias2.example.com"
 
-# Whether or not to include public keys of known clients in the known_hosts file
-# that is served to other clients. Can be true/false. If true, the known_hosts
-# endpoint will list public keys for all known client hosts. If false, it will only
-# include the extra_known_hosts entries.
-client_known_hosts: true
-
 # Optional set of extra entries to provide to clients when they fetch a known_hosts
 # file. This is useful if you have externally-managed servers in your infrastructure
 # that you want to tell clients about, of if you want to add CA entries to the
