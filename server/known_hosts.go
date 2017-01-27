@@ -19,6 +19,7 @@ package main
 import (
 	"bytes"
 	"net/http"
+	"strings"
 )
 
 func (c *context) KnownHosts(w http.ResponseWriter, r *http.Request) {
@@ -41,21 +42,25 @@ func (c *context) GetKnownHosts() (string, error) {
 		buffer.WriteString(entry)
 		buffer.WriteRune('\n')
 	}
-	rows, err := c.db.Query("SELECT * FROM hostkeys")
-	if err != nil {
-		return "", err
-	}
-	for rows.Next() {
-		var id int
-		var hostname, pubkey string
-		err = rows.Scan(&id, &hostname, &pubkey)
+	if c.conf.ClientKnownHosts {
+		rows, err := c.db.Query("SELECT * FROM hostkeys")
 		if err != nil {
 			return "", err
 		}
-		buffer.WriteString(hostname)
-		buffer.WriteRune(' ')
-		buffer.WriteString(pubkey)
-		buffer.WriteRune('\n')
+		for rows.Next() {
+			var id int
+			var hostname, pubkey string
+			err = rows.Scan(&id, &hostname, &pubkey)
+			if err != nil {
+				return "", err
+			}
+			buffer.WriteString(hostname)
+			buffer.WriteRune(' ')
+			buffer.WriteString(pubkey)
+			if !strings.HasSuffix(pubkey, "\n") {
+				buffer.WriteRune('\n')
+			}
+		}
 	}
 	return buffer.String(), nil
 }
