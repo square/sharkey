@@ -47,15 +47,16 @@ type hostKey struct {
 }
 
 type config struct {
-	TLS         tlsConfig `yaml:"tls"`
-	RequestAddr string    `yaml:"request_addr"`
-	HostKey     string    `yaml:"host_key"`    // deprecated
-	SignedCert  string    `yaml:"signed_cert"` // deprecated
-	HostKeys    []hostKey `yaml:"host_keys"`
-	KnownHosts  string    `yaml:"known_hosts"`
-	Sleep       string
-	Sudo        string
-	SSHReload   []string `yaml:"ssh_reload"`
+	TLS                       tlsConfig `yaml:"tls"`
+	RequestAddr               string    `yaml:"request_addr"`
+	HostKey                   string    `yaml:"host_key"`    // deprecated
+	SignedCert                string    `yaml:"signed_cert"` // deprecated
+	HostKeys                  []hostKey `yaml:"host_keys"`
+	KnownHosts                string    `yaml:"known_hosts"`
+	KnownHostsAuthoritiesOnly bool      `yaml:"known_hosts_authorities_only"`
+	Sleep                     string    `yaml:"sleep"`
+	Sudo                      string    `yaml:"sudo"`
+	SSHReload                 []string  `yaml:"ssh_reload"`
 }
 
 type context struct {
@@ -175,7 +176,13 @@ func (c *context) reloadSSH() {
 }
 
 func (c *context) makeKnownHosts() {
-	url := c.conf.RequestAddr + "/known_hosts"
+	var knownHosts string
+	if c.conf.KnownHostsAuthoritiesOnly {
+		knownHosts = "/authority"
+	} else {
+		knownHosts = "/known_hosts"
+	}
+	url := c.conf.RequestAddr + knownHosts
 	resp, err := c.client.Get(url)
 	if err != nil {
 		log.Printf("Error talking to backend: %s\n", err)
