@@ -181,6 +181,9 @@ Configuration (example):
     # Where to install the known_hosts file
     known_hosts: /etc/ssh/known_hosts
 
+    # If set to true, only install authorities in known_hosts file (ignore other machine's host keys).
+    known_hosts_authorities_only: false
+
     # How often to refresh/request new certificate
     sleep: "24h"
 
