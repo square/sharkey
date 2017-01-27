@@ -28,5 +28,6 @@ func (c *context) Authority(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	w.Write([]byte("@cert-authority * "))
 	w.Write(ssh.MarshalAuthorizedKey(c.signer.PublicKey()))
 }
