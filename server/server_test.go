@@ -135,7 +135,7 @@ func TestGetAuthority(t *testing.T) {
 		t.Fatalf("Error reading testdata: %s", err)
 	}
 
-	if !bytes.Equal(body, expected) {
+	if !bytes.Equal(body, []byte(fmt.Sprintf("@cert-authority * %s", expected))) {
 		t.Fatalf("Request body from /authority unexpectedly returned '%s'", string(body))
 	}
 }
