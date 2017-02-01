@@ -13,7 +13,10 @@ Sharkey is a service for managing certificates for use by OpenSSH.
 
 Sharkey has a client component and a server component. The server is
 responsible for issuing signed host certificates, the client is responsible for
-installing host certificates on machines.
+installing host certificates on machines. Sharkey builds on the trust relationships
+of your existing X.509 PKI to manage trusted SSH certificates. Existing X.509
+certificates can be minted into SSH certificates, so you don't have to maintain
+two separate PKI hierarchies. 
 
 ### Build
 
