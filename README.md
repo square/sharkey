@@ -76,7 +76,6 @@ Configuration (example):
     #     ca: /path/to/mysql-ca-bundle.pem
     #     cert: /path/to/mysql-client-cert.pem     # MySQL client cert
     #     key: /path/to/mysql-client-cert-key.pem  # MySQL client cert key
-    #     min_version: 1.2                         # Min. TLS version
 
     # Server listening address
     listen_addr: "0.0.0.0:8080"
@@ -87,7 +86,6 @@ Configuration (example):
       ca: /path/to/ca-bundle.pem
       cert: /path/to/server-certificate.pem 
       key: /path/to/server-certificate-key.pem
-      min_version: 1.2                             # Min. TLS version (optional) 
 
     # Signing key (from ssh-keygen)
     signing_key: /path/to/ca-signing-key 

@@ -22,7 +22,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -60,7 +59,6 @@ type databaseConfig struct {
 
 type tlsConfig struct {
 	Ca, Cert, Key string
-	MinVersion    string `yaml:"min_version"`
 }
 
 var tlsVersionMap = map[string]uint16{
@@ -285,12 +283,16 @@ func buildConfig(opts tlsConfig) (*tls.Config, error) {
 		ClientCAs:  caBundle,
 		ClientAuth: tls.VerifyClientCertIfGiven,
 		MinVersion: tls.VersionTLS12,
-	}
-
-	if ver, ok := tlsVersionMap[opts.MinVersion]; ok {
-		config.MinVersion = ver
-	} else if opts.MinVersion != "" {
-		return nil, fmt.Errorf("unknown TLS version: %s", opts.MinVersion)
+		CipherSuites: []uint16{
+			tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+			tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
+			tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
+			tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
+		},
+		CurvePreferences: []tls.CurveID{
+			// P-256 has an ASM implementation, others do not (as of 2016-12-19).
+			tls.CurveP256,
+		},
 	}
 
 	if opts.Cert != "" {
