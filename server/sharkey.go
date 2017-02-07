@@ -61,12 +61,6 @@ type tlsConfig struct {
 	Ca, Cert, Key string
 }
 
-var tlsVersionMap = map[string]uint16{
-	"1.0": tls.VersionTLS10,
-	"1.1": tls.VersionTLS11,
-	"1.2": tls.VersionTLS12,
-}
-
 type config struct {
 	Database        databaseConfig      `yaml:"db"`
 	TLS             tlsConfig           `yaml:"tls"`
@@ -292,6 +286,8 @@ func buildConfig(opts tlsConfig) (*tls.Config, error) {
 			tls.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA,
 			tls.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,
 			tls.TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA,
+			tls.TLS_RSA_WITH_AES_128_CBC_SHA,
+			tls.TLS_RSA_WITH_AES_256_CBC_SHA,
 		},
 		CurvePreferences: []tls.CurveID{
 			// P-256 has an ASM implementation, others do not (as of 2016-12-19).
