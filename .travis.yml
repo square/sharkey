@@ -9,6 +9,8 @@ services:
 go:
   - 1.6
   - 1.7
+  - 1.8
+  - 1.9
 
 install:
   - go build -o sharkey-server -v ./server
