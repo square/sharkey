@@ -188,13 +188,8 @@ Configuration (example):
     # How often to refresh/request new certificate
     sleep: "24h"
 
-    # Path to sudo binary on client host
-    # Uses sudo to write known_hosts and signed_cert.pub if this field specified
-    sudo: "/usr/bin/sudo"
-
     # Command to restart ssh daemon for the host
-    # If sudo is set as well, this command will be prefixed with 'sudo'
-    ssh_reload: ["service", "ssh", "restart"]
+    ssh_reload: ["sudo", "service", "ssh", "restart"]
 
 OpenSSH will have to be configured to read the signed host certificate (this is
 with the `HostCertificate` config option in `sshd_config`). If the signed host
