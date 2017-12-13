@@ -55,7 +55,6 @@ type config struct {
 	KnownHosts                string    `yaml:"known_hosts"`
 	KnownHostsAuthoritiesOnly bool      `yaml:"known_hosts_authorities_only"`
 	Sleep                     string    `yaml:"sleep"`
-	Sudo                      string    `yaml:"sudo"`
 	SSHReload                 []string  `yaml:"ssh_reload"`
 }
 
@@ -266,9 +265,6 @@ func buildConfig(caBundlePath string) (*tls.Config, error) {
 func (c *context) shellOut(command []string) {
 	if len(command) == 0 {
 		return
-	}
-	if c.conf.Sudo != "" {
-		command = append([]string{c.conf.Sudo}, command...)
 	}
 	cmd := exec.Cmd{
 		Path: command[0],
