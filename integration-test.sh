@@ -10,7 +10,7 @@ function die() {
 
 function wait_for_container() {
   echo "Waiting for $1..."
-  for i in range 0 10; do
+  for i in range 0 15; do
     if docker ps | grep -q "$1"; then
       return
     fi

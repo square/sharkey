@@ -7,14 +7,14 @@ services:
   - docker
 
 go:
-  - 1.6
-  - 1.7
+  - '1.11.x'
+  - '1.x'
 
 install:
   - go build -o sharkey-server -v ./server
   - go build -o sharkey-client -v ./client
-  - docker build -t server -f Dockerfile .
-  - docker build -t client -f DockerfileClientTest .
+  - docker build -t server:latest -f Dockerfile .
+  - docker build -t client:latest -f DockerfileClientTest .
 
 script:
   # Unit tests
