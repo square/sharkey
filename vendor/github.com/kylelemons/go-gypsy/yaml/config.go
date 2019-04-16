@@ -258,7 +258,6 @@ func Child(root Node, spec string) (Node, error) {
 			}
 			return recur(n, last+tok, remain)
 		}
-		panic("unreachable")
 	}
 	return recur(root, "", spec)
 }
