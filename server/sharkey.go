@@ -209,6 +209,7 @@ func (c *context) Status(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		panic(err)
 	}
+	w.Header().Set("Content-Type", "application/json")
 	if !resp.Ok {
 		w.WriteHeader(http.StatusServiceUnavailable)
 	}
