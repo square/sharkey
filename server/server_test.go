@@ -159,6 +159,38 @@ func TestGetKnownHosts(t *testing.T) {
 	}
 }
 
+func TestStatus(t *testing.T) {
+	c, err := generateContext()
+	if err != nil {
+		t.Fatalf("Error generating context: %s", err)
+	}
+	defer c.db.Close()
+
+	req, err := generateRequest()
+	if err != nil {
+		t.Fatalf("Error generating context: %s", err)
+	}
+
+	rec := httptest.NewRecorder()
+	c.Status(rec, req)
+
+	rec.Flush()
+	if rec.Code != 200 {
+		t.Fatalf("Request to /_status failed with %d", rec.Code)
+	}
+
+	body, _ := ioutil.ReadAll(rec.Body)
+	expected := []byte(`{"ok":true,"status":"ok","messages":[]}`)
+
+	if !bytes.Equal(body, expected) {
+		t.Fatalf("Request body from /_status unexpectedly returned '%s'", string(body))
+	}
+
+	if contentType := rec.Header().Get("Content-Type"); contentType != "application/json" {
+		t.Fatalf("Expected Content-Type to be set to 'application/json', but instead got %s", contentType)
+	}
+}
+
 func generateContext() (*context, error) {
 	db, err := generateDB()
 	if err != nil {
