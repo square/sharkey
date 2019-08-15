@@ -30,6 +30,7 @@ import (
 	"github.com/square/sharkey/server/config"
 
 	"github.com/gorilla/mux"
+	"github.com/spiffe/spire/pkg/common/idutil"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -49,7 +50,7 @@ func (c *context) Enroll(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "no client certificate provided", http.StatusUnauthorized)
 		return
 	}
-	if !clientHostnameMatches(hostname, r) {
+	if !clientHostnameMatches(hostname, r) && !clientSPIFFEIDMatches(hostname, r) {
 		http.Error(w, "hostname does not match certificate", http.StatusForbidden)
 		return
 	}
@@ -110,6 +111,34 @@ func clientHostnameMatches(hostname string, r *http.Request) bool {
 	}
 	cert := conn.VerifiedChains[0][0]
 	return cert.VerifyHostname(hostname) == nil
+}
+
+func clientSPIFFEIDMatches(hostname string, r *http.Request) bool {
+	conn := r.TLS
+	if len(conn.VerifiedChains) == 0 {
+		return false
+	}
+	cert := conn.VerifiedChains[0][0]
+
+	if len(cert.URIs) == 0 || cert.URIs[0] == nil {
+		return false
+	}
+
+	spiffeIDURL := cert.URIs[0]
+	// TOOD: this should be tied to the trust domain that is configured for each env
+	err := idutil.ValidateSpiffeIDURL(spiffeIDURL, idutil.AllowAnyTrustDomainWorkload())
+	if err != nil {
+		return false
+	}
+
+	// the hostname should be included in the SPIFFE ID, separated by '/'
+	for _, segment := range strings.Split(spiffeIDURL.Path, "/") {
+		if hostname == segment {
+			return true
+		}
+	}
+
+	return false
 }
 
 func (c *context) signHost(hostname string, serial uint64, pubkey ssh.PublicKey) (*ssh.Certificate, error) {

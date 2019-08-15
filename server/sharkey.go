@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"log"
+	"net"
 	"net/http"
 	"os"
 
@@ -30,8 +31,7 @@ import (
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	_ "github.com/mattn/go-sqlite3"
-	"golang.org/x/crypto/ssh"
-	"gopkg.in/alecthomas/kingpin.v2"
+	"github.com/square/ghostunnel/certloader"
 )
 
 var (
@@ -109,13 +109,30 @@ func startServer(conf *config.Config) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	server := &http.Server{
-		Addr:      conf.ListenAddr,
-		TLSConfig: tlsConfig,
-		Handler:   loggingHandler,
+
+	cert, err := certloader.CertificateFromPEMFiles(conf.TLS.Cert, conf.TLS.Key, conf.TLS.Ca)
+	if err != nil {
+		log.Fatal(err)
 	}
 
-	log.Fatal(server.ListenAndServeTLS(conf.TLS.Cert, conf.TLS.Key))
+	config := certloader.TLSConfigSourceFromCertificate(cert)
+	srvConfig, err := config.GetServerConfig(tlsConfig)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	ln, err := net.Listen("tcp", conf.ListenAddr)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	l := certloader.NewListener(ln, srvConfig)
+
+	server := &http.Server{
+		Handler: loggingHandler,
+	}
+
+	log.Fatal(server.Serve(l))
 }
 
 func migrate(migrationsDir string, conf *config.Config) {

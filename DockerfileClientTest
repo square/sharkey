@@ -21,7 +21,7 @@ COPY . /go/src/github.com/square/sharkey
 
 ENV GO111MODULE=on
 RUN cd /go/src/github.com/square/sharkey && \
-	go build -v -o /usr/bin/sharkey-client ./client && \
+	go build -tags nopkcs11 -v -o /usr/bin/sharkey-client ./client && \
     cp test/integration/client_entry.sh /usr/bin/entrypoint.sh && \
     chmod +x /usr/bin/entrypoint.sh
 

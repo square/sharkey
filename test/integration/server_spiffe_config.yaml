@@ -1,0 +1,14 @@
+---
+db:
+  address: /tmp/test.db
+  type: sqlite
+tls:
+  ca: /build/test/tls/CertAuth.crt
+  cert: /build/test/tls/server_spiffe.crt
+  key: /build/test/tls/server.key
+signing_key: /build/test/keys/server_ca
+cert_duration: 168h
+listen_addr: "0.0.0.0:8080"
+aliases:
+  "client":
+    - "localhost"
