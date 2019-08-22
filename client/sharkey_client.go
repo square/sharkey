@@ -19,45 +19,26 @@ package main
 import (
 	"bytes"
 	"crypto/tls"
-	"crypto/x509"
 	"io/ioutil"
 	"log"
+	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"strings"
 	"time"
 
 	"gopkg.in/alecthomas/kingpin.v2"
-	"gopkg.in/yaml.v2"
+
+	"github.com/pkg/errors"
+	"github.com/square/ghostunnel/certloader"
 )
 
 var (
 	app        = kingpin.New("sharkey-client", "Certificate client of the ssh-ca system.")
 	configPath = kingpin.Flag("config", "Path to config file for client.").Required().String()
 )
-
-type tlsConfig struct {
-	Ca, Cert, Key string
-}
-
-type hostKey struct {
-	HostKey    string `yaml:"plain"`
-	SignedCert string `yaml:"signed"`
-}
-
-type config struct {
-	TLS                       tlsConfig `yaml:"tls"`
-	RequestAddr               string    `yaml:"request_addr"`
-	HostKey                   string    `yaml:"host_key"`    // deprecated
-	SignedCert                string    `yaml:"signed_cert"` // deprecated
-	HostKeys                  []hostKey `yaml:"host_keys"`
-	KnownHosts                string    `yaml:"known_hosts"`
-	KnownHostsAuthoritiesOnly bool      `yaml:"known_hosts_authorities_only"`
-	Sleep                     string    `yaml:"sleep"`
-	Sudo                      string    `yaml:"sudo"`
-	SSHReload                 []string  `yaml:"ssh_reload"`
-}
 
 type context struct {
 	conf   *config
@@ -68,27 +49,14 @@ func main() {
 	log.Println("Starting client")
 	kingpin.Version("0.0.1")
 	kingpin.Parse()
-	data, err := ioutil.ReadFile(*configPath)
+
+	log.Println("Loading config from ", *configPath)
+	conf, err := newConfigFromFile(*configPath)
 	if err != nil {
-		log.Fatalf("Error reading config file: %s\n", err)
+		log.Fatal(err)
 	}
 
-	var conf config
-	if err := yaml.Unmarshal(data, &conf); err != nil {
-		log.Fatalf("Error parsing config file: %s\n", err)
-	}
-	c := &context{
-		conf: &conf,
-	}
-
-	if len(c.conf.HostKeys) == 0 {
-		// Support old host_key/signed_cert options
-		c.conf.HostKeys = []hostKey{
-			{c.conf.HostKey, c.conf.SignedCert},
-		}
-	} else if c.conf.HostKey != "" || c.conf.SignedCert != "" {
-		log.Fatalf("Options host_key/signed_cert and host_keys are mutually exclusive")
-	}
+	c := &context{conf: conf}
 
 	if err = c.GenerateClient(); err != nil {
 		log.Fatalf("Error generating http client: %s\n", err)
@@ -220,36 +188,40 @@ func (c *context) makeKnownHosts() {
 }
 
 func (c *context) GenerateClient() error {
-	tlsConfig, err := buildConfig(c.conf.TLS.Ca)
+	baseConfig, err := c.buildBaseTLSConfig()
 	if err != nil {
-		return err
+		log.Fatal(err)
 	}
-	cert, err := tls.LoadX509KeyPair(c.conf.TLS.Cert, c.conf.TLS.Key)
+
+	var clientConfig certloader.TLSClientConfig
+	if c.conf.SPIFFE.Enabled {
+		clientConfig, err = c.buildSPIFFETLSConfig(baseConfig)
+	} else {
+		clientConfig, err = c.buildTLSConfig(baseConfig)
+	}
 	if err != nil {
-		return err
+		log.Fatal(err)
 	}
-	tlsConfig.Certificates = []tls.Certificate{cert}
-	tr := &http.Transport{TLSClientConfig: tlsConfig}
+
+	var dialer certloader.Dialer = &net.Dialer{Timeout: timeoutDuration}
+	tlsDialer := certloader.DialerWithCertificate(clientConfig, timeoutDuration, dialer)
+
+	tr := &http.Transport{DialTLS: tlsDialer.Dial}
 	c.client = &http.Client{Transport: tr}
 	return nil
 }
 
 // buildConfig reads command-line options and builds a tls.Config
-func buildConfig(caBundlePath string) (*tls.Config, error) {
-	caBundleBytes, err := ioutil.ReadFile(caBundlePath)
+func (c *context) buildBaseTLSConfig() (*tls.Config, error) {
+	uri, err := url.Parse(c.conf.RequestAddr)
 	if err != nil {
 		return nil, err
 	}
 
-	caBundle := x509.NewCertPool()
-	caBundle.AppendCertsFromPEM(caBundleBytes)
-
 	return &tls.Config{
-		// Certificates
-		RootCAs:    caBundle,
-		ClientCAs:  caBundle,
-		ClientAuth: tls.RequireAndVerifyClientCert,
 		MinVersion: tls.VersionTLS12,
+		// ServerName is needed, since we're using custom dialer via DialTLS
+		ServerName: uri.Hostname(),
 		CipherSuites: []uint16{
 			tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
 			tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
@@ -261,6 +233,32 @@ func buildConfig(caBundlePath string) (*tls.Config, error) {
 			tls.CurveP256,
 		},
 	}, nil
+}
+
+func (c *context) buildTLSConfig(base *tls.Config) (certloader.TLSClientConfig, error) {
+	cert, err := certloader.CertificateFromPEMFiles(c.conf.TLS.Cert, c.conf.TLS.Key, c.conf.TLS.Ca)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to load certificate")
+	}
+
+	config := certloader.TLSConfigSourceFromCertificate(cert)
+
+	clientConfig, err := config.GetClientConfig(base)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to build client TLS config from base")
+	}
+
+	return clientConfig, nil
+}
+
+func (c *context) buildSPIFFETLSConfig(base *tls.Config) (certloader.TLSClientConfig, error) {
+	logger := log.New(os.Stdout, "", log.Flags())
+	source, err := certloader.TLSConfigSourceFromWorkloadAPI(c.conf.SPIFFE.WorkloadAPI, logger)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to connect to the SPIFFE Workload API")
+	}
+
+	return source.GetClientConfig(base)
 }
 
 func (c *context) shellOut(command []string) {

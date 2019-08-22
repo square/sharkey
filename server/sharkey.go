@@ -32,6 +32,9 @@ import (
 	"github.com/gorilla/mux"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/square/ghostunnel/certloader"
+	"golang.org/x/crypto/ssh"
+
+	"gopkg.in/alecthomas/kingpin.v2"
 )
 
 var (
@@ -110,7 +113,7 @@ func startServer(conf *config.Config) {
 		log.Fatal(err)
 	}
 
-	cert, err := certloader.CertificateFromPEMFiles(conf.TLS.Cert, conf.TLS.Key, conf.TLS.Ca)
+	cert, err := certloader.CertificateFromPEMFiles(conf.TLS.Cert, conf.TLS.Key, conf.TLS.CA)
 	if err != nil {
 		log.Fatal(err)
 	}
