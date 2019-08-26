@@ -213,7 +213,7 @@ func (c *context) Status(w http.ResponseWriter, r *http.Request) {
 	if !resp.Ok {
 		w.WriteHeader(http.StatusServiceUnavailable)
 	}
-	w.Write(out)
+	_, _ = w.Write(out)
 }
 
 func (c *config) getDB() (*sql.DB, error) {
@@ -256,7 +256,10 @@ func (c *config) getMySQL() (*sql.DB, error) {
 		if err != nil {
 			return nil, err
 		}
-		mysql.RegisterTLSConfig("sharkey", tlsConfig)
+		err = mysql.RegisterTLSConfig("sharkey", tlsConfig)
+		if err != nil {
+			return nil, err
+		}
 		url += "?tls=sharkey"
 	}
 

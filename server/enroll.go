@@ -55,7 +55,7 @@ func (c *context) Enroll(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Write([]byte(cert))
+	_, _ = w.Write([]byte(cert))
 }
 
 func (c *context) EnrollHost(hostname string, r *http.Request) (string, error) {
@@ -144,6 +144,9 @@ func (c *context) signHost(hostname string, serial uint64, pubkey ssh.PublicKey)
 		ValidBefore:     (uint64)(endTime.Unix()),
 	}
 
-	template.SignCert(rand.Reader, c.signer)
+	err = template.SignCert(rand.Reader, c.signer)
+	if err != nil {
+		return nil, err
+	}
 	return &template, nil
 }

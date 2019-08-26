@@ -32,7 +32,7 @@ func (c *context) KnownHosts(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	w.Write([]byte(hosts))
+	_, _ = w.Write([]byte(hosts))
 }
 
 func (c *context) GetKnownHosts() (string, error) {
