@@ -4,6 +4,8 @@ import (
 	"database/sql"
 	"fmt"
 
+	"golang.org/x/crypto/ssh"
+
 	"bitbucket.org/liamstask/goose/lib/goose"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -17,15 +19,18 @@ type SqliteStorage struct {
 
 var _ Storage = &SqliteStorage{}
 
-func (s *SqliteStorage) RecordIssuance(certType uint32, principal string, pubkey string) (int64, error) {
+func (s *SqliteStorage) RecordIssuance(certType uint32, principal string, pubkey ssh.PublicKey) (uint64, error) {
+	pkdata := ssh.MarshalAuthorizedKey(pubkey)
+
 	result, err := s.DB.Exec(
 		"INSERT OR REPLACE INTO hostkeys (hostname, pubkey) VALUES (?, ?)",
-		principal, pubkey)
+		principal, pkdata)
 	if err != nil {
 		return 0, fmt.Errorf("error recording issuance: %s", err.Error())
 	}
 
-	return result.LastInsertId()
+	id, err := result.LastInsertId()
+	return uint64(id), err
 }
 
 func (s *SqliteStorage) QueryHostkeys() (ResultIterator, error) {

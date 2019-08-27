@@ -24,11 +24,11 @@ listen_addr: "0.0.0.0:8080"
 # ---
 tls:
   ca: /path/to/ca-bundle.pem
-  cert: /path/to/server-certificate.pem 
+  cert: /path/to/server-certificate.pem
   key: /path/to/server-certificate-key.pem
 
 # Signing key (from ssh-keygen)
-signing_key: /path/to/ca-signing-key 
+signing_key: /path/to/ca-signing-key
 
 # Lifetime/validity duration for generated host certificates
 cert_duration: 168h
@@ -53,3 +53,13 @@ aliases:
 # known_hosts file.
 extra_known_hosts:
   - "@cert-authority *.example.com ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDBwhA8rKPESjDy4iqTlkBqUlBU2xjwtmFUHY6cutA9TYbB5H/mjxzUpnSNw/HyFWNpysjTSQtHWWBdJdJGU/0aDgFUwbduHeDFxviGVSkOxm2AYn7XJopzITZRqmAmsYXHUBa75RQb+UgIG7EpCoi8hF4ItJV+TT777j1irkXwlMmeDiJEaA+7bPNdUdGw8zRbk0CyeotYVD0griRtkXdfgnQAu+DvBwOuW/uiZaPz/rAVjt4b9fmp6pcFKI3RsBqqn5tQVhKCPVuSwqvIQ7CTVkMClYovlH1/zGe8PG1DHbM9irP98S5j3mVD9W5v3QILpsg24RIS14M8pLarlD6t root@authority"
+
+
+# Client certs are issued to users who connect through an authenticating proxy
+# That client should connect with a client certificate and set the username
+# in a header.
+auth_proxy:
+  # Hostname is validated against the incoming client certificate
+  hostname: proxy.example.com
+  # The HTTP header containing the username
+  username_header: X-Forwarded-User

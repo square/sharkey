@@ -9,3 +9,7 @@ tls:
 signing_key: test/keys/server_ca
 cert_duration: 168h
 listen_addr: "127.0.0.1:8080"
+
+auth_proxy:
+  hostname: proxy.example.com
+  username_header: X-Forwarded-User

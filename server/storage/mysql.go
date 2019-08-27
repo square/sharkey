@@ -4,6 +4,8 @@ import (
 	"database/sql"
 	"fmt"
 
+	"golang.org/x/crypto/ssh"
+
 	"bitbucket.org/liamstask/goose/lib/goose"
 	"github.com/go-sql-driver/mysql"
 	"github.com/square/sharkey/server/config"
@@ -16,16 +18,20 @@ type MysqlStorage struct {
 
 var _ Storage = &MysqlStorage{}
 
-func (my *MysqlStorage) RecordIssuance(certType uint32, principal string, pubkey string) (int64, error) {
+func (my *MysqlStorage) RecordIssuance(certType uint32, principal string, pubkey ssh.PublicKey) (uint64, error) {
+	pkdata := ssh.MarshalAuthorizedKey(pubkey)
+
 	result, err := my.DB.Exec(
 		"INSERT INTO hostkeys (hostname, pubkey) VALUES (?, ?) ON DUPLICATE KEY UPDATE pubkey = ?",
-		principal, pubkey, pubkey)
+		principal, pkdata, pkdata)
 	if err != nil {
 		return 0, fmt.Errorf("error recording issuance: %s", err.Error())
 
 	}
 
-	return result.LastInsertId()
+	// TODO: This is broken!  It doesn't work in the ON DUPLICATE KEY case.
+	id, err := result.LastInsertId()
+	return uint64(id), err
 }
 
 func (my *MysqlStorage) QueryHostkeys() (ResultIterator, error) {
