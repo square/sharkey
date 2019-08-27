@@ -22,14 +22,16 @@ func Load(file string) (conf Config, err error) {
 }
 
 type Config struct {
-	Database        Database            `yaml:"db"`
-	TLS             TLS                 `yaml:"tls"`
-	SigningKey      string              `yaml:"signing_key"`
-	CertDuration    string              `yaml:"cert_duration"`
-	ListenAddr      string              `yaml:"listen_addr"`
-	StripSuffix     string              `yaml:"strip_suffix"`
-	Aliases         map[string][]string `yaml:"aliases"`
-	ExtraKnownHosts []string            `yaml:"extra_known_hosts"`
+	Database            Database             `yaml:"db"`
+	TLS                 TLS                  `yaml:"tls"`
+	SigningKey          string               `yaml:"signing_key"`
+	HostCertDuration    string               `yaml:"host_cert_duration"`
+	UserCertDuration    string               `yaml:"user_cert_duration"`
+	ListenAddr          string               `yaml:"listen_addr"`
+	StripSuffix         string               `yaml:"strip_suffix"`
+	Aliases             map[string][]string  `yaml:"aliases"`
+	ExtraKnownHosts     []string             `yaml:"extra_known_hosts"`
+	AuthenticatingProxy *AuthenticatingProxy `yaml:"auth_proxy"`
 }
 
 type TLS struct {
@@ -45,6 +47,11 @@ type Database struct {
 	Schema   string
 	Type     string
 	TLS      *TLS
+}
+
+type AuthenticatingProxy struct {
+	Hostname       string `yaml:"hostname"`
+	UsernameHeader string `yaml:"username_header"`
 }
 
 // buildConfig reads command-line options and builds a tls.Config

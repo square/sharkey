@@ -1,2 +1,5 @@
 sharkey-server
 sharkey-client
+/server/server
+/client/client
+.data

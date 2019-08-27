@@ -19,6 +19,8 @@ package main
 import (
 	"bytes"
 	"net/http"
+
+	"golang.org/x/crypto/ssh"
 )
 
 func (c *context) KnownHosts(w http.ResponseWriter, r *http.Request) {
@@ -50,10 +52,10 @@ func (c *context) GetKnownHosts() (string, error) {
 		if err != nil {
 			return "", err
 		}
+
 		buffer.WriteString(hostname)
 		buffer.WriteRune(' ')
-		buffer.WriteString(pubkey)
-		buffer.WriteRune('\n')
+		buffer.Write(ssh.MarshalAuthorizedKey(pubkey))
 	}
 	return buffer.String(), nil
 }

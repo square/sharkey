@@ -1,0 +1,10 @@
+# Development database set-up only, NOT PRODUCTION:
+#
+# $ mysql -u root
+# mysql> CREATE DATABASE sharkey_development;
+# mysql> CREATE USER 'sharkey'@'localhost';
+# mysql> GRANT ALL PRIVILEGES ON sharkey_development.* TO 'sharkey'@'localhost'
+# mysql> FLUSH PRIVILEGES;
+development:
+    driver: mysql
+    open: sharkey:@/sharkey_development

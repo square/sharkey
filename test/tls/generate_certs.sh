@@ -23,6 +23,10 @@ certstrap --depot-path "$DIR" sign --CA CertAuth --expires="10 years" server
 certstrap --depot-path "$DIR" request-cert --ip 127.0.0.1 --domain client
 certstrap --depot-path "$DIR" sign --CA CertAuth --expires="10 years" client
 
-for i in client.key client.crt server.key server.crt CertAuth.key CertAuth.crt; do
+# Generate proxy cert
+certstrap --depot-path "$DIR" request-cert --ip 127.0.0.1 --domain proxy
+certstrap --depot-path "$DIR" sign --CA CertAuth --expires="10 years" proxy
+
+for i in proxy.key proxy crt client.key client.crt server.key server.crt CertAuth.key CertAuth.crt; do
   mv "$DIR/$i" "$BASEDIR/"
 done

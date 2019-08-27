@@ -14,12 +14,8 @@ RUN sed 's@session\s*required\s*pam_loginuid.so@session optional pam_loginuid.so
 ENV NOTVISIBLE "in users profile"
 RUN echo "export VISIBLE=now" >> /etc/profile
 
-# Setup key based ssh
-RUN mkdir /root/.ssh && chmod 700 /root/.ssh
-ADD test/integration/id_rsa.pub /root/.ssh/authorized_keys
-ADD test/integration/id_rsa.pub /root/.ssh/id_rsa.pub
-ADD test/integration/id_rsa /root/.ssh/id_rsa
-RUN chmod 400 /root/.ssh/authorized_keys && chown root:root /root/.ssh/* && chmod 600 /root/.ssh/*
+# Setup user cert based ssh
+ADD test/keys/server_ca.pub /etc/ssh/ca_user_key.pub
 
 COPY . /go/src/github.com/square/sharkey
 
@@ -32,5 +28,9 @@ RUN cd /go/src/github.com/square/sharkey && \
 RUN echo "HostCertificate /etc/ssh/ssh_host_rsa_key-cert.pub" >> /etc/ssh/sshd_config
 RUN echo "HostCertificate /etc/ssh/ssh_host_ecdsa_key-cert.pub" >> /etc/ssh/sshd_config
 RUN echo "HostCertificate /etc/ssh/ssh_host_ed25519_key-cert.pub" >> /etc/ssh/sshd_config
+RUN echo "TrustedUserCAKeys /etc/ssh/ca_user_key.pub" >> /etc/ssh/sshd_config
+
+# Need to add ssh user for testing user certs
+RUN useradd -ms /bin/bash alice
 
 ENTRYPOINT ["/usr/bin/entrypoint.sh"]

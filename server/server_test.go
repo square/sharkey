@@ -141,21 +141,30 @@ func TestGetAuthority(t *testing.T) {
 	}
 }
 
+const testKey string = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCsfClUt72oaV+J4mAe3XK1nPqXn9ISTxRNj" +
+	"giXNYhmVvluwrtS5o0Fwc144c1pqW38QilcvCNmaiXvPxdaSyzTnVCg8UGlNsa/Fwz5Lc/hojAoQCitiRxBna81VSGZI" +
+	"Ob79JD4lVxGxDOfVykfvjo4KzfDE4stMPixW6grDlpUsb6MVELUB1jcyx+j6RVctPYuRtZKLI/5SX6NGWK3H6P68IhY+" +
+	"2MKYIc6+TItabryI0cNTIcjkPyetAo2T1BOl8sPeukIvX3zG2NrxxinXrEWScYpsuoewvuCYdc/+fY2o498PwM+asCpQ" +
+	"i+3IRj7siWEDLwK0kga+aYrwyO2/TiB"
+
 func TestGetKnownHosts(t *testing.T) {
 	c, err := generateContext(t)
 	require.NoError(t, err)
 
-	_, err = c.storage.RecordIssuance(ssh.HostCert, "hostname", "pubkey")
+	pubkey, _, _, _, err := ssh.ParseAuthorizedKey([]byte(testKey))
+	require.NoError(t, err)
+
+	_, err = c.storage.RecordIssuance(ssh.HostCert, "hostname", pubkey)
 	require.NoError(t, err)
 
 	result, err := c.GetKnownHosts()
 	require.NoError(t, err)
 
 	results := strings.Split(result, "\n")
-	require.EqualValues(t, 3, len(results))
+	assert.EqualValues(t, 3, len(results))
 	assert.Equal(t, "@certificate-authority * pubkey", results[0])
 
-	assert.Equal(t, "hostname pubkey", results[1])
+	assert.Equal(t, "hostname "+testKey, results[1])
 
 	assert.Equal(t, "", results[2])
 }
@@ -189,8 +198,9 @@ func TestStatus(t *testing.T) {
 
 func generateContext(t *testing.T) (*context, error) {
 	conf := &config.Config{
-		SigningKey:   "testdata/server_ca",
-		CertDuration: "160h",
+		SigningKey:       "testdata/server_ca",
+		HostCertDuration: "160h",
+		UserCertDuration: "8h",
 		Aliases: map[string][]string{
 			"hostname.square": []string{"alias.square"},
 		},

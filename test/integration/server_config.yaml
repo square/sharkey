@@ -7,8 +7,12 @@ tls:
   cert: /build/test/tls/server.crt
   key: /build/test/tls/server.key
 signing_key: /build/test/keys/server_ca
-cert_duration: 168h
+host_cert_duration: 168h
+user_cert_duration: 24h
 listen_addr: "0.0.0.0:8080"
 aliases:
   "client":
     - "localhost"
+auth_proxy:
+  hostname: proxy
+  username_header: X-Forwarded-User
