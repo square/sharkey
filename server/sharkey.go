@@ -17,27 +17,21 @@
 package main
 
 import (
-	"crypto/tls"
-	"crypto/x509"
-	"database/sql"
 	"encoding/json"
-	"errors"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 
-	"golang.org/x/crypto/ssh"
+	"github.com/square/sharkey/server/config"
+	"github.com/square/sharkey/server/storage"
 
-	"bitbucket.org/liamstask/goose/lib/goose"
-
-	"gopkg.in/alecthomas/kingpin.v2"
-	"gopkg.in/yaml.v2"
-
-	"github.com/go-sql-driver/mysql"
+	_ "bitbucket.org/liamstask/goose/lib/goose"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	_ "github.com/mattn/go-sqlite3"
+	"golang.org/x/crypto/ssh"
+	"gopkg.in/alecthomas/kingpin.v2"
 )
 
 var (
@@ -52,26 +46,6 @@ var (
 	migrationsDir = migrateCmd.Flag("migrations", "Path to migrations directory.").ExistingDir()
 )
 
-type databaseConfig struct {
-	Username, Password, Address, Schema, Type string
-	TLS                                       *tlsConfig `yaml:"tls"`
-}
-
-type tlsConfig struct {
-	Ca, Cert, Key string
-}
-
-type config struct {
-	Database        databaseConfig      `yaml:"db"`
-	TLS             tlsConfig           `yaml:"tls"`
-	SigningKey      string              `yaml:"signing_key"`
-	CertDuration    string              `yaml:"cert_duration"`
-	ListenAddr      string              `yaml:"listen_addr"`
-	StripSuffix     string              `yaml:"strip_suffix"`
-	Aliases         map[string][]string `yaml:"aliases"`
-	ExtraKnownHosts []string            `yaml:"extra_known_hosts"`
-}
-
 type statusResponse struct {
 	Ok       bool     `json:"ok"`
 	Status   string   `json:"status"`
@@ -79,9 +53,9 @@ type statusResponse struct {
 }
 
 type context struct {
-	signer ssh.Signer
-	db     *sql.DB
-	conf   *config
+	signer  ssh.Signer
+	storage storage.Storage
+	conf    *config.Config
 }
 
 func main() {
@@ -89,69 +63,20 @@ func main() {
 	app.Version("0.0.1")
 	command := kingpin.MustParse(app.Parse(os.Args[1:]))
 
-	data, err := ioutil.ReadFile(*configPath)
+	conf, err := config.Load(*configPath)
 	if err != nil {
-		log.Fatal("error reading config file")
-	} else {
-		log.Print("Read in config file")
-	}
-
-	var conf config
-	if err := yaml.Unmarshal(data, &conf); err != nil {
-		log.Fatal("error parsing config file")
-	} else {
-		log.Print("Unmarshalled yaml config")
+		log.Fatalf("Error loading configuration file: %v", err)
 	}
 
 	switch command {
 	case startCmd.FullCommand():
 		startServer(&conf)
 	case migrateCmd.FullCommand():
-		migrate(&conf)
+		migrate(*migrationsDir, &conf)
 	}
 }
 
-func migrate(conf *config) {
-	log.Print("Migrating database")
-	db, err := conf.getDB()
-	if err != nil {
-		log.Fatalf("unable to open database: %s\n", err)
-	}
-	defer db.Close()
-
-	driver := goose.DBDriver{
-		Name: conf.Database.Type,
-	}
-
-	switch conf.Database.Type {
-	case "mysql":
-		driver.Import = "github.com/go-sql-driver/mysql"
-		driver.Dialect = &goose.MySqlDialect{}
-	case "sqlite":
-		driver.Import = "github.com/mattn/go-sqlite3"
-		driver.Dialect = &goose.Sqlite3Dialect{}
-	default:
-		log.Fatalf("unknown database type %s", conf.Database.Type)
-	}
-
-	gooseConf := goose.DBConf{
-		MigrationsDir: *migrationsDir,
-		Env:           "sharkey",
-		Driver:        driver,
-	}
-
-	desiredVersion, err := goose.GetMostRecentDBVersion(*migrationsDir)
-	if err != nil {
-		log.Fatalf("unable to run migrations: %s\n", err)
-	}
-
-	err = goose.RunMigrationsOnDb(&gooseConf, *migrationsDir, desiredVersion, db)
-	if err != nil {
-		log.Fatalf("unable to run migrations: %s\n", err)
-	}
-}
-
-func startServer(conf *config) {
+func startServer(conf *config.Config) {
 	log.Print("Starting http server")
 	c := &context{
 		conf: conf,
@@ -159,20 +84,19 @@ func startServer(conf *config) {
 
 	privateKey, err := ioutil.ReadFile(c.conf.SigningKey)
 	if err != nil {
-		log.Fatalf("unable to read signing key file: %s\n", err)
+		log.Fatalf("unable to read signing key file: %s", err)
 	}
 
 	c.signer, err = ssh.ParsePrivateKey(privateKey)
 	if err != nil {
-		log.Fatalf("unable to parse signing key data: %s\n", err)
+		log.Fatalf("unable to parse signing key data: %s", err)
 	}
 
-	c.db, err = conf.getDB()
+	c.storage, err = storage.FromConfig(c.conf.Database)
 	if err != nil {
-		log.Fatalf("unable to open database: %s\n", err)
+		log.Fatalf("unable to setup database: %s", err)
 	}
-
-	defer c.db.Close()
+	defer c.storage.Close()
 
 	handler := mux.NewRouter()
 	handler.Path("/enroll/{hostname}").Methods("POST").HandlerFunc(c.Enroll)
@@ -180,7 +104,7 @@ func startServer(conf *config) {
 	handler.Path("/authority").Methods("GET").HandlerFunc(c.Authority)
 	handler.Path("/_status").Methods("HEAD", "GET").HandlerFunc(c.Status)
 	loggingHandler := handlers.LoggingHandler(os.Stderr, handler)
-	tlsConfig, err := buildConfig(conf.TLS)
+	tlsConfig, err := config.BuildTLS(conf.TLS)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -193,13 +117,25 @@ func startServer(conf *config) {
 	log.Fatal(server.ListenAndServeTLS(conf.TLS.Cert, conf.TLS.Key))
 }
 
+func migrate(migrationsDir string, conf *config.Config) {
+	db, err := storage.FromConfig(conf.Database)
+	if err != nil {
+		log.Fatalf("unable to setup database: %s", err.Error())
+	}
+	defer db.Close()
+
+	if err := db.Migrate(migrationsDir); err != nil {
+		log.Fatalf("error migrating DB: %s", err.Error())
+	}
+}
+
 func (c *context) Status(w http.ResponseWriter, r *http.Request) {
 	resp := statusResponse{
 		Ok:       true,
 		Status:   "ok",
 		Messages: []string{},
 	}
-	err := c.db.Ping()
+	err := c.storage.Ping()
 	if err != nil {
 		resp.Ok = false
 		resp.Status = "critical"
@@ -214,99 +150,4 @@ func (c *context) Status(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusServiceUnavailable)
 	}
 	_, _ = w.Write(out)
-}
-
-func (c *config) getDB() (*sql.DB, error) {
-	var db *sql.DB
-	var err error
-
-	switch c.Database.Type {
-	case "sqlite":
-		if c.Database.TLS != nil {
-			return nil, errors.New("TLS not supported with sqlite")
-		}
-		db, err = sql.Open("sqlite3", c.Database.Address)
-	case "mysql":
-		db, err = c.getMySQL()
-	default:
-		return nil, errors.New("Unknown database type: " + c.Database.Type)
-	}
-
-	if err != nil {
-		return nil, err
-	}
-
-	err = db.Ping()
-	if err != nil {
-		return nil, err
-	}
-	return db, nil
-}
-
-func (c *config) getMySQL() (*sql.DB, error) {
-	url := c.Database.Username
-	if c.Database.Password != "" {
-		url += ":" + c.Database.Password
-	}
-	url += "@tcp(" + c.Database.Address + ")/" + c.Database.Schema
-
-	// Setup TLS (if configured)
-	if c.Database.TLS != nil {
-		tlsConfig, err := buildConfig(*c.Database.TLS)
-		if err != nil {
-			return nil, err
-		}
-		err = mysql.RegisterTLSConfig("sharkey", tlsConfig)
-		if err != nil {
-			return nil, err
-		}
-		url += "?tls=sharkey"
-	}
-
-	return sql.Open("mysql", url)
-}
-
-// buildConfig reads command-line options and builds a tls.Config
-func buildConfig(opts tlsConfig) (*tls.Config, error) {
-	caBundleBytes, err := ioutil.ReadFile(opts.Ca)
-	if err != nil {
-		return nil, err
-	}
-
-	caBundle := x509.NewCertPool()
-	caBundle.AppendCertsFromPEM(caBundleBytes)
-
-	config := &tls.Config{
-		RootCAs:    caBundle,
-		ClientCAs:  caBundle,
-		ClientAuth: tls.VerifyClientCertIfGiven,
-		MinVersion: tls.VersionTLS11,
-		CipherSuites: []uint16{
-			tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
-			tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
-			tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
-			tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
-			tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,
-			tls.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA,
-			tls.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,
-			tls.TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA,
-			tls.TLS_RSA_WITH_AES_128_CBC_SHA,
-			tls.TLS_RSA_WITH_AES_256_CBC_SHA,
-		},
-		CurvePreferences: []tls.CurveID{
-			// P-256 has an ASM implementation, others do not (as of 2016-12-19).
-			tls.CurveP256,
-		},
-	}
-
-	if opts.Cert != "" {
-		// Setup client certificates
-		certs, err := tls.LoadX509KeyPair(opts.Cert, opts.Key)
-		if err != nil {
-			return nil, err
-		}
-		config.Certificates = []tls.Certificate{certs}
-	}
-
-	return config, nil
 }
