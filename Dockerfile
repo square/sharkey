@@ -14,8 +14,10 @@ FROM golang:alpine
 MAINTAINER Cedric Staub "cs@squareup.com"
 
 # Install CGO deps
-RUN apk add --update gcc musl-dev && \
+RUN apk add --update git mercurial gcc musl-dev && \
     rm -rf /var/cache/apk/*
+
+ENV GO111MODULE=on
 
 # Copy source
 COPY . /go/src/github.com/square/sharkey

@@ -23,6 +23,7 @@ RUN chmod 400 /root/.ssh/authorized_keys && chown root:root /root/.ssh/* && chmo
 
 COPY . /go/src/github.com/square/sharkey
 
+ENV GO111MODULE=on
 RUN cd /go/src/github.com/square/sharkey && \
 	go build -v -o /usr/bin/sharkey-client ./client && \
     cp test/integration/client_entry.sh /usr/bin/entrypoint.sh && \
