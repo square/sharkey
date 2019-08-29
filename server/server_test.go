@@ -21,7 +21,6 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
-	"database/sql"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -29,6 +28,11 @@ import (
 	"os"
 	"strings"
 	"testing"
+
+	"github.com/square/sharkey/server/config"
+	"github.com/square/sharkey/server/storage"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	_ "github.com/mattn/go-sqlite3"
 	"golang.org/x/crypto/ssh"
@@ -50,11 +54,10 @@ func TestValidClient(t *testing.T) {
 }
 
 func TestSignHost(t *testing.T) {
-	c, err := generateContext()
+	c, err := generateContext(t)
 	if err != nil {
 		t.Fatalf("error generating context: %s", err.Error())
 	}
-	defer c.db.Close()
 	data, err := ioutil.ReadFile("testdata/ssh_host_rsa_key.pub")
 	if err != nil {
 		t.Fatalf("error reading test ssh host key: %s", err.Error())
@@ -91,11 +94,10 @@ func assertPrincipal(t *testing.T, principals []string, expected string) {
 }
 
 func TestEnrollHost(t *testing.T) {
-	c, err := generateContext()
+	c, err := generateContext(t)
 	if err != nil {
 		t.Fatalf("Error generating context: %s", err.Error())
 	}
-	defer c.db.Close()
 
 	for i := 0; i < 5; i++ {
 		request, err := generateRequest()
@@ -110,11 +112,10 @@ func TestEnrollHost(t *testing.T) {
 }
 
 func TestGetAuthority(t *testing.T) {
-	c, err := generateContext()
+	c, err := generateContext(t)
 	if err != nil {
 		t.Fatalf("Error generating context: %s", err)
 	}
-	defer c.db.Close()
 
 	req, err := generateRequest()
 	if err != nil {
@@ -141,35 +142,30 @@ func TestGetAuthority(t *testing.T) {
 }
 
 func TestGetKnownHosts(t *testing.T) {
-	c, err := generateContext()
-	if err != nil {
-		t.Fatalf("Error generating context: %s", err.Error())
-	}
-	defer c.db.Close()
+	c, err := generateContext(t)
+	require.NoError(t, err)
+
+	_, err = c.storage.RecordIssuance(ssh.HostCert, "hostname", "pubkey")
+	require.NoError(t, err)
+
 	result, err := c.GetKnownHosts()
-	if err != nil {
-		t.Fatal("Error getting known hosts")
-	}
+	require.NoError(t, err)
+
 	results := strings.Split(result, "\n")
-	if results[0] != "@certificate-authority * pubkey" {
-		t.Fatal("Incorrect known hosts format")
-	}
-	if results[1] != "hostname pubkey" {
-		t.Fatal("Incorrect known hosts format")
-	}
+	require.EqualValues(t, 3, len(results))
+	assert.Equal(t, "@certificate-authority * pubkey", results[0])
+
+	assert.Equal(t, "hostname pubkey", results[1])
+
+	assert.Equal(t, "", results[2])
 }
 
 func TestStatus(t *testing.T) {
-	c, err := generateContext()
-	if err != nil {
-		t.Fatalf("Error generating context: %s", err)
-	}
-	defer c.db.Close()
+	c, err := generateContext(t)
+	require.NoError(t, err)
 
 	req, err := generateRequest()
-	if err != nil {
-		t.Fatalf("Error generating context: %s", err)
-	}
+	require.NoError(t, err)
 
 	rec := httptest.NewRecorder()
 	c.Status(rec, req)
@@ -191,12 +187,8 @@ func TestStatus(t *testing.T) {
 	}
 }
 
-func generateContext() (*context, error) {
-	db, err := generateDB()
-	if err != nil {
-		return nil, err
-	}
-	conf := &config{
+func generateContext(t *testing.T) (*context, error) {
+	conf := &config.Config{
 		SigningKey:   "testdata/server_ca",
 		CertDuration: "160h",
 		Aliases: map[string][]string{
@@ -208,42 +200,24 @@ func generateContext() (*context, error) {
 	}
 
 	key, err := ioutil.ReadFile(conf.SigningKey)
-	if err != nil {
-		return nil, err
-	}
+	require.NoError(t, err)
 
 	signer, err := ssh.ParsePrivateKey(key)
-	if err != nil {
-		return nil, err
-	}
+	require.NoError(t, err)
+
+	// in-memory sqlite: see https://github.com/mattn/go-sqlite3 for address docs
+	sqlite, err := storage.NewSqlite(config.Database{Address: ":memory:"})
+	require.NoError(t, err)
+	err = sqlite.Migrate("../db/sqlite/migrations")
+	require.NoError(t, err)
 
 	c := &context{
-		signer: signer,
-		db:     db,
-		conf:   conf,
+		signer:  signer,
+		storage: sqlite,
+		conf:    conf,
 	}
-	return c, nil
-}
 
-func generateDB() (*sql.DB, error) {
-	db, err := sql.Open("sqlite3", "testdata/test.db")
-	if err != nil {
-		return nil, err
-	}
-	_, err = db.Exec("DROP TABLE IF EXISTS hostkeys")
-	if err != nil {
-		return nil, err
-	}
-	_, err = db.Exec("CREATE TABLE hostkeys(id INTEGER PRIMARY KEY AUTOINCREMENT, hostname VARCHAR(191) NOT NULL UNIQUE, pubkey BLOB NOT NULL)")
-	if err != nil {
-		return nil, err
-	}
-	_, err = db.Exec("INSERT INTO hostkeys(hostname, pubkey) VALUES('hostname','pubkey')")
-	if err != nil {
-		fmt.Println("bleh")
-		return nil, err
-	}
-	return db, nil
+	return c, nil
 }
 
 func generateRequest() (*http.Request, error) {
@@ -253,7 +227,7 @@ func generateRequest() (*http.Request, error) {
 	cert := x509.Certificate{
 		Subject: sub,
 	}
-	chain := [][]*x509.Certificate{[]*x509.Certificate{&cert}}
+	chain := [][]*x509.Certificate{{&cert}}
 	conn := tls.ConnectionState{
 		VerifiedChains: chain,
 	}

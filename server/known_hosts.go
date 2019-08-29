@@ -41,14 +41,12 @@ func (c *context) GetKnownHosts() (string, error) {
 		buffer.WriteString(entry)
 		buffer.WriteRune('\n')
 	}
-	rows, err := c.db.Query("SELECT * FROM hostkeys")
+	rows, err := c.storage.QueryHostkeys()
 	if err != nil {
 		return "", err
 	}
 	for rows.Next() {
-		var id int
-		var hostname, pubkey string
-		err = rows.Scan(&id, &hostname, &pubkey)
+		hostname, pubkey, err := rows.Get()
 		if err != nil {
 			return "", err
 		}

@@ -12,7 +12,7 @@ require (
 	github.com/kylelemons/go-gypsy v0.0.0-20160905020020-08cad365cd28 // indirect
 	github.com/lib/pq v1.1.0 // indirect
 	github.com/mattn/go-sqlite3 v1.11.0
-	github.com/stretchr/testify v1.3.0 // indirect
+	github.com/stretchr/testify v1.3.0
 	github.com/ziutek/mymysql v0.0.0-20160623123511-8787d5581eb6 // indirect
 	golang.org/x/crypto v0.0.0-20190411191339-88737f569e3a
 	golang.org/x/sys v0.0.0-20190416152802-12500544f89f // indirect

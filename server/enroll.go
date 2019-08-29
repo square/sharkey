@@ -18,7 +18,6 @@ package main
 
 import (
 	"crypto/rand"
-	"database/sql"
 	"encoding/base64"
 	"io/ioutil"
 	"log"
@@ -27,12 +26,7 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
-	sqlite3 "github.com/mattn/go-sqlite3"
 	"golang.org/x/crypto/ssh"
-)
-
-const (
-	sshHostCertificateType = 2
 )
 
 func (c *context) Enroll(w http.ResponseWriter, r *http.Request) {
@@ -70,23 +64,7 @@ func (c *context) EnrollHost(hostname string, r *http.Request) (string, error) {
 	}
 
 	// Update table with host
-	var result sql.Result
-	if _, ok := c.db.Driver().(*sqlite3.SQLiteDriver); ok {
-		// SQLite supports "insert or replace" for insert-or-update
-		result, err = c.db.Exec(
-			"INSERT OR REPLACE INTO hostkeys (hostname, pubkey) VALUES (?, ?)",
-			encodedPubkey, hostname)
-	} else {
-		// MySQL supports "on duplicate key update" for insert-or-update
-		result, err = c.db.Exec(
-			"INSERT INTO hostkeys (hostname, pubkey) VALUES (?, ?) ON DUPLICATE KEY UPDATE pubkey = ?",
-			hostname, encodedPubkey, encodedPubkey)
-	}
-	if err != nil {
-		return "", err
-	}
-
-	id, err := result.LastInsertId()
+	id, err := c.storage.RecordIssuance(ssh.HostCert, hostname, encodedPubkey)
 	if err != nil {
 		return "", err
 	}
@@ -137,7 +115,7 @@ func (c *context) signHost(hostname string, serial uint64, pubkey ssh.PublicKey)
 		Nonce:           nonce,
 		Key:             pubkey,
 		Serial:          serial,
-		CertType:        sshHostCertificateType,
+		CertType:        ssh.HostCert,
 		KeyId:           hostname,
 		ValidPrincipals: principals,
 		ValidAfter:      (uint64)(startTime.Unix()),
