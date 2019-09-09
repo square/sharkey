@@ -96,6 +96,7 @@ func (c *context) enroll(hostKey string, signedCert string) {
 		// Should be impossible
 		panic(err)
 	}
+	hostname = "sharkey-client"
 	url := c.conf.RequestAddr + "/enroll/" + hostname // host name of machine running on
 	hostkey, err := ioutil.ReadFile(hostKey)          // path to host key
 	if err != nil {
@@ -163,7 +164,7 @@ func (c *context) makeKnownHosts() {
 		return
 	}
 	if resp.StatusCode != 200 {
-		log.Printf("Error retrieving known hosts file from server (got status %d)\n", resp.StatusCode)
+		log.Printf("Error retrieving known hosts file from server (got status %d), response: %s", resp.StatusCode, str)
 		return
 	}
 	tmp, err := ioutil.TempFile("", "sharkey-known-hosts")
@@ -196,8 +197,10 @@ func (c *context) GenerateClient() error {
 	var clientConfig certloader.TLSClientConfig
 	if c.conf.SPIFFE.Enabled {
 		clientConfig, err = c.buildSPIFFETLSConfig(baseConfig)
+		log.Println("Using SPIFFE TLS Config")
 	} else {
 		clientConfig, err = c.buildTLSConfig(baseConfig)
+		log.Println("Using standard TLS Config")
 	}
 	if err != nil {
 		log.Fatal(err)
@@ -213,7 +216,7 @@ func (c *context) GenerateClient() error {
 
 // buildConfig reads command-line options and builds a tls.Config
 func (c *context) buildBaseTLSConfig() (*tls.Config, error) {
-	uri, err := url.Parse(c.conf.RequestAddr)
+	_, err := url.Parse(c.conf.RequestAddr)
 	if err != nil {
 		return nil, err
 	}
@@ -221,7 +224,7 @@ func (c *context) buildBaseTLSConfig() (*tls.Config, error) {
 	return &tls.Config{
 		MinVersion: tls.VersionTLS12,
 		// ServerName is needed, since we're using custom dialer via DialTLS
-		ServerName: uri.Hostname(),
+		InsecureSkipVerify: true,
 		CipherSuites: []uint16{
 			tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
 			tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
@@ -247,7 +250,6 @@ func (c *context) buildTLSConfig(base *tls.Config) (certloader.TLSClientConfig, 
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to build client TLS config from base")
 	}
-
 	return clientConfig, nil
 }
 

@@ -18,6 +18,7 @@ RUN echo "export VISIBLE=now" >> /etc/profile
 ADD test/keys/server_ca.pub /etc/ssh/ca_user_key.pub
 
 COPY . /go/src/github.com/square/sharkey
+COPY spire-agent /bin/
 
 ENV GO111MODULE=on
 RUN cd /go/src/github.com/square/sharkey && \

@@ -108,18 +108,26 @@ func startServer(conf *config.Config) {
 	handler.Path("/authority").Methods("GET").HandlerFunc(c.Authority)
 	handler.Path("/_status").Methods("HEAD", "GET").HandlerFunc(c.Status)
 	loggingHandler := handlers.LoggingHandler(os.Stderr, handler)
-	tlsConfig, err := config.BuildTLS(conf.TLS)
-	if err != nil {
-		log.Fatal(err)
-	}
 
-	cert, err := certloader.CertificateFromPEMFiles(conf.TLS.Cert, conf.TLS.Key, conf.TLS.CA)
-	if err != nil {
-		log.Fatal(err)
-	}
+	/*
+		tlsConfig, err := config.BuildTLS(conf.TLS)
+		if err != nil {
+			log.Fatal(err)
+		}
 
-	config := certloader.TLSConfigSourceFromCertificate(cert)
-	srvConfig, err := config.GetServerConfig(tlsConfig)
+		cert, err := certloader.CertificateFromPEMFiles(conf.TLS.Cert, conf.TLS.Key, conf.TLS.CA)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		config := certloader.TLSConfigSourceFromCertificate(cert)
+		srvConfig, err := config.GetServerConfig(tlsConfig)
+		if err != nil {
+			log.Fatal(err)
+		}
+	*/
+
+	srvConfig, err := config.BuildSPIFFETLS(conf.SPIFFE)
 	if err != nil {
 		log.Fatal(err)
 	}

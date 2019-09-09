@@ -1,16 +1,13 @@
 ---
-tls:
-  ca: /build/test/tls/CertAuth.crt
-  cert: /build/test/tls/client_spiffe.crt
-  key: /build/test/tls/client.key
 request_addr: "https://server:8080"
 host_keys:
-  - plain: "/etc/ssh/ssh_host_rsa_key.pub"
-    signed: "/etc/ssh/ssh_host_rsa_key-cert.pub"
-  - plain: "/etc/ssh/ssh_host_ed25519_key.pub"
-    signed: "/etc/ssh/ssh_host_ed25519_key-cert.pub"
-  - plain: "/etc/ssh/ssh_host_ecdsa_key.pub"
-    signed: "/etc/ssh/ssh_host_ecdsa_key-cert.pub"
+  - plain: "./test/integration/id_rsa.pub"
+    signed: "./test/integration/id_rsa-cert.pub"
 known_hosts: /etc/ssh/known_hosts
 sleep: "10s"
 ssh_reload: ["service", "ssh", "restart"]
+spiffe:
+  enabled: true
+  allowed_uris:
+    - "spiffe://example.org/host/sharkey-server"
+  workload_api: "unix:///tmp/agent.sock"

@@ -1,0 +1,13 @@
+---
+request_addr: "https://127.0.1:8080"
+host_keys:
+  - plain: "./test/integration/id_rsa.pub"
+    signed: "./test/integration/id_rsa-cert.pub"
+known_hosts: "./test/integration/known_hosts"
+sleep: "10s"
+ssh_reload: ["echo", "service", "ssh", "restart"]
+spiffe:
+  enabled: true
+  allowed_uris:
+    - "spiffe://example.org/host/sharkey-server"
+  workload_api: "unix:///tmp/agent.sock"
