@@ -7,5 +7,10 @@ tls:
   cert: test/tls/testCert.crt
   key: test/tls/testCert.key
 signing_key: test/keys/server_ca
-cert_duration: 168h
+host_cert_duration: 168h
+user_cert_duration: 24h
 listen_addr: "127.0.0.1:8080"
+
+auth_proxy:
+  hostname: proxy.example.com
+  username_header: X-Forwarded-User

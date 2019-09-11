@@ -16,7 +16,7 @@ responsible for issuing signed host certificates, the client is responsible for
 installing host certificates on machines. Sharkey builds on the trust relationships
 of your existing X.509 PKI to manage trusted SSH certificates. Existing X.509
 certificates can be minted into SSH certificates, so you don't have to maintain
-two separate PKI hierarchies. 
+two separate PKI hierarchies.
 
 ### Build
 
@@ -41,21 +41,21 @@ generate a `known_hosts` file from the issuance log if required.
 Usage:
 
     usage: sharkey-server --config=CONFIG [<flags>] <command> [<args> ...]
-    
+
     Certificate issuer of the ssh-ca system.
-    
+
     Flags:
       --help           Show context-sensitive help (also try --help-long and --help-man).
       --config=CONFIG  Path to config file for server.
       --version        Show application version.
-    
+
     Commands:
       help [<command>...]
         Show help.
-    
+
       start
         Run the sharkey server.
-    
+
       migrate [<flags>]
         Set up database/run migrations.
 
@@ -87,14 +87,17 @@ Configuration (example):
     # ---
     tls:
       ca: /path/to/ca-bundle.pem
-      cert: /path/to/server-certificate.pem 
+      cert: /path/to/server-certificate.pem
       key: /path/to/server-certificate-key.pem
 
     # Signing key (from ssh-keygen)
-    signing_key: /path/to/ca-signing-key 
+    signing_key: /path/to/ca-signing-key
 
     # Lifetime/validity duration for generated host certificates
-    cert_duration: 168h
+    host_cert_duration: 168h
+
+    # Lifetime/validity duration for generated user certificates
+    user_cert_duration: 24h
 
     # Optional suffix to strip from client hostnames when generating certificates.
     # This is useful if all your machines have a common TLD/domain, and you want to
@@ -152,7 +155,7 @@ host certificate is then installed on the machine (`signed_cert`).
 Usage:
 
     usage: sharkey-client --config=CONFIG [<flags>]
-    
+
     Flags:
       --help           Show context-sensitive help (also try --help-long and --help-man).
       --config=CONFIG  Path to yaml config file for setup
@@ -167,7 +170,7 @@ Configuration (example):
     # ---
     tls:
       ca: /path/to/ca-bundle.pem
-      cert: /path/to/client-certificate.pem 
+      cert: /path/to/client-certificate.pem
       key: /path/to/client-certificate-key.pem
 
     # List of host keys for OpenSSH server
@@ -201,4 +204,22 @@ with the `HostCertificate` config option in `sshd_config`). If the signed host
 certificate is missing from disk, OpenSSH will fall back to TOFU with the
 default host key. Therefore, it should always be safe to configure a host
 certificate; even if the Sharkey client fails you can still SSH into your
-machine. 
+machine.
+
+### User Certificates
+
+For a user to SSH into an openssh server, they can present a certificate, which
+should have a principal matching their username.
+Sharkey outsources identifying users to an SSO proxy.  That proxy needs to
+connect to sharkey over mTLS.  You can configure the DNS SAN that should appear
+on the server's client cert (eg, proxy.example.com) and the HTTP header it sets
+the username to (eg, X-Forwarded-User).  See example configs.
+
+No client helper is included with Sharkey at this time, so you have to set up
+a script yourself at this time to enroll the user.
+
+Testing looks something like this:
+   `curl --cert proxy.crt --key proxy.key https://localhost:8080/enroll_user/bob -H "X-Forwarded-User: bob" -d @~/.ssh/bob.pub`
+
+But in production use you'd expect it more like
+   `curl <auth to your proxy> https://ssoproxy.example.com/enroll_user/bob -d @~/.ssh/bob.pub`

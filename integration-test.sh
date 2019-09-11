@@ -3,6 +3,8 @@
 set -e
 set -o pipefail
 
+TMPDIR=$(mktemp -d)
+
 function die() {
   echo "$1"
   exit 1
@@ -25,6 +27,7 @@ function cleanup() {
   docker stop client
   docker rm server
   docker rm client
+  rm -r "$TMPDIR"
 }
 
 trap cleanup EXIT
@@ -42,6 +45,7 @@ docker run -d \
 	-v "$PWD":"$BUILD_CONTEXT" \
 	-e SHARKEY_CONFIG="$SERVER_CONFIG" \
 	-e SHARKEY_MIGRATIONS="$MIGRATION_CONFIG" \
+	-p 12321:8080 \
 	server start
 
 wait_for_container server
@@ -63,13 +67,29 @@ wait_for_container client
 # Give client some time to finish initializing
 sleep 5
 
+echo "Starting integration test"
+
+echo "Signing user ssh key"
+# Sign user ssh key
+# NOTE: on MacOS ensure that your curl it built with openssl (and not SecureTransport)
+#       or you won't be able to load client cert from PEM file
+curl --cert $PWD/test/tls/proxy.crt --key $PWD/test/tls/proxy.key \
+  https://localhost:12321/enroll_user/alice -H "X-Forwarded-User: alice" \
+  -d @$PWD/test/ssh/alice_rsa.pub -k \
+  -o $TMPDIR/alice_rsa-cert.pub -s
+
+ssh-keygen -L -f $TMPDIR/alice_rsa-cert.pub
+
+# SSH will want cert and identity file in the same dir
+cp $PWD/test/ssh/alice_rsa* $TMPDIR/
+chmod 600 $TMPDIR/alice_rsa
+
+
 # Try sshing into container
 if ! grep -q "127.0.0.1 client" /etc/hosts; then
   echo "127.0.0.1 client" | sudo tee -a /etc/hosts
 fi
 
 echo Attempting to ssh into client container
-
-chmod 600 test/integration/id_rsa
-ssh -p 14296 -o "BatchMode yes" -o "UserKnownHostsFile=test/integration/known_hosts" -i test/integration/id_rsa root@client true || die "failed to connect to 'client'"
-ssh -p 14296 -o "BatchMode yes" -o "UserKnownHostsFile=test/integration/known_hosts" -i test/integration/id_rsa root@localhost true || die "failed to connect to 'localhost'"
+ssh -p 14296 -o "BatchMode yes" -o "UserKnownHostsFile=test/integration/known_hosts" -i $TMPDIR/alice_rsa alice@client true || die "failed to connect to 'client'"
+ssh -p 14296 -o "BatchMode yes" -o "UserKnownHostsFile=test/integration/known_hosts" -i $TMPDIR/alice_rsa alice@localhost true || die "failed to connect to 'localhost'"

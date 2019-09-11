@@ -8,13 +8,15 @@ import (
 	"database/sql"
 	"errors"
 
+	"golang.org/x/crypto/ssh"
+
 	"github.com/square/sharkey/server/config"
 )
 
 type Storage interface {
 	// Record an issuance of type (host or client) to principal with pubkey string
 	// Returns an integer ID for the record (ie, database row primary key)
-	RecordIssuance(certType uint32, principal string, pubkey string) (int64, error)
+	RecordIssuance(certType uint32, principal string, pubkey ssh.PublicKey) (uint64, error)
 
 	// Query all hostkeys
 	QueryHostkeys() (ResultIterator, error)
@@ -29,7 +31,7 @@ type Storage interface {
 // ResultIterator works like a typed sql.Rows: Call Next() and then Get() until Next() returns false
 type ResultIterator interface {
 	Next() bool
-	Get() (principal string, key string, err error)
+	Get() (principal string, key ssh.PublicKey, err error)
 }
 
 // Given a database configuration, return an appropriate Storage interface
@@ -68,8 +70,13 @@ func (r *SqlResultIterator) Next() bool {
 	return r.Rows.Next()
 }
 
-func (r *SqlResultIterator) Get() (string, string, error) {
-	var hostname, pubkey string
+func (r *SqlResultIterator) Get() (string, ssh.PublicKey, error) {
+	var hostname string
+	var pubkey []byte
 	err := r.Rows.Scan(&hostname, &pubkey)
-	return hostname, pubkey, err
+	if err != nil {
+		return "", nil, err
+	}
+	pk, _, _, _, err := ssh.ParseAuthorizedKey(pubkey)
+	return hostname, pk, err
 }
