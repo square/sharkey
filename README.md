@@ -219,7 +219,7 @@ No client helper is included with Sharkey at this time, so you have to set up
 a script yourself at this time to enroll the user.
 
 Testing looks something like this:
-   `curl --cert proxy.crt --key proxy.key https://localhost:8080/enroll_user/bob -H "X-Forwarded-User: bob" -d @~/.ssh/bob.pub`
+   `curl --cert proxy.crt --key proxy.key https://localhost:8080/enroll_user -H "X-Forwarded-User: bob" -d @~/.ssh/bob.pub`
 
 But in production use you'd expect it more like
-   `curl <auth to your proxy> https://ssoproxy.example.com/enroll_user/bob -d @~/.ssh/bob.pub`
+   `curl <auth to your proxy> https://ssoproxy.example.com/enroll_user -d @~/.ssh/bob.pub`

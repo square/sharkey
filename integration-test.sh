@@ -74,7 +74,7 @@ echo "Signing user ssh key"
 # NOTE: on MacOS ensure that your curl it built with openssl (and not SecureTransport)
 #       or you won't be able to load client cert from PEM file
 curl --cert $PWD/test/tls/proxy.crt --key $PWD/test/tls/proxy.key \
-  https://localhost:12321/enroll_user/alice -H "X-Forwarded-User: alice" \
+  https://localhost:12321/enroll_user -H "X-Forwarded-User: alice" \
   -d @$PWD/test/ssh/alice_rsa.pub -k \
   -o $TMPDIR/alice_rsa-cert.pub -s
 

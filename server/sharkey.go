@@ -100,7 +100,7 @@ func startServer(conf *config.Config) {
 
 	handler := mux.NewRouter()
 	handler.Path("/enroll/{hostname}").Methods("POST").HandlerFunc(c.Enroll)
-	handler.Path("/enroll_user/{user}").Methods("POST").HandlerFunc(c.EnrollUser)
+	handler.Path("/enroll_user").Methods("POST").HandlerFunc(c.EnrollUser)
 	handler.Path("/known_hosts").Methods("GET").HandlerFunc(c.KnownHosts)
 	handler.Path("/authority").Methods("GET").HandlerFunc(c.Authority)
 	handler.Path("/_status").Methods("HEAD", "GET").HandlerFunc(c.Status)
