@@ -16,3 +16,10 @@ aliases:
 auth_proxy:
   hostname: proxy
   username_header: X-Forwarded-User
+ssh:
+  user_cert_extensions:
+    - "permit-X11-forwarding"
+    - "permit-agent-forwarding"
+    - "permit-port-forwarding"
+    - "permit-pty"
+    - "permit-user-rc"

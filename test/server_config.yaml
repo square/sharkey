@@ -10,7 +10,13 @@ signing_key: test/keys/server_ca
 host_cert_duration: 168h
 user_cert_duration: 24h
 listen_addr: "127.0.0.1:8080"
-
 auth_proxy:
   hostname: proxy.example.com
   username_header: X-Forwarded-User
+ssh:
+  user_cert_extensions:
+    - "permit-X11-forwarding"
+    - "permit-agent-forwarding"
+    - "permit-port-forwarding"
+    - "permit-pty"
+    - "permit-user-rc"
