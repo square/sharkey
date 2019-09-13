@@ -144,6 +144,7 @@ func (c *context) sign(keyId string, principals []string, serial uint64, certTyp
 		ValidPrincipals: principals,
 		ValidAfter:      (uint64)(startTime.Unix()),
 		ValidBefore:     (uint64)(endTime.Unix()),
+		Permissions:     getPermissionsForCertType(certType),
 	}
 
 	err = template.SignCert(rand.Reader, c.signer)
@@ -225,4 +226,17 @@ func getDurationForCertType(cfg *config.Config, certType uint32) (time.Duration,
 	}
 
 	return duration, err
+}
+
+func getPermissionsForCertType(certType uint32) (perms ssh.Permissions) {
+	if certType == ssh.UserCert {
+		perms.Extensions = map[string]string{
+			"permit-X11-forwarding":   "",
+			"permit-agent-forwarding": "",
+			"permit-port-forwarding":  "",
+			"permit-pty":              "",
+			"permit-user-rc":          "",
+		}
+	}
+	return
 }
