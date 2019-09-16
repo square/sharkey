@@ -32,6 +32,11 @@ type Config struct {
 	Aliases             map[string][]string  `yaml:"aliases"`
 	ExtraKnownHosts     []string             `yaml:"extra_known_hosts"`
 	AuthenticatingProxy *AuthenticatingProxy `yaml:"auth_proxy"`
+	SSH                 SSH                  `yaml:"ssh"`
+}
+
+type SSH struct {
+	UserCertExtensions []string `yaml:"user_cert_extensions"`
 }
 
 type TLS struct {
