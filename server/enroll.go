@@ -237,12 +237,14 @@ func getDurationForCertType(cfg *config.Config, certType uint32) (time.Duration,
 }
 
 func getPermissionsForCertType(cfg *config.SSH, certType uint32) (perms ssh.Permissions) {
-	if certType == ssh.UserCert && len(cfg.UserCertExtensions) > 0 {
-		perms.Extensions = make(map[string]string, len(cfg.UserCertExtensions))
-		for _, ext := range cfg.UserCertExtensions {
-			perms.Extensions[ext] = ""
+	switch certType {
+	case ssh.UserCert:
+		if cfg != nil && len(cfg.UserCertExtensions) > 0 {
+			perms.Extensions = make(map[string]string, len(cfg.UserCertExtensions))
+			for _, ext := range cfg.UserCertExtensions {
+				perms.Extensions[ext] = ""
+			}
 		}
-		perms.Extensions = map[string]string{}
 	}
 	return
 }
