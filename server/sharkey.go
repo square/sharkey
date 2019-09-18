@@ -20,6 +20,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"log"
+	"net"
 	"net/http"
 	"os"
 
@@ -30,7 +31,9 @@ import (
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	_ "github.com/mattn/go-sqlite3"
+	"github.com/square/ghostunnel/certloader"
 	"golang.org/x/crypto/ssh"
+
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 
@@ -105,17 +108,42 @@ func startServer(conf *config.Config) {
 	handler.Path("/authority").Methods("GET").HandlerFunc(c.Authority)
 	handler.Path("/_status").Methods("HEAD", "GET").HandlerFunc(c.Status)
 	loggingHandler := handlers.LoggingHandler(os.Stderr, handler)
-	tlsConfig, err := config.BuildTLS(conf.TLS)
+
+	/*
+		tlsConfig, err := config.BuildTLS(conf.TLS)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		cert, err := certloader.CertificateFromPEMFiles(conf.TLS.Cert, conf.TLS.Key, conf.TLS.CA)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		config := certloader.TLSConfigSourceFromCertificate(cert)
+		srvConfig, err := config.GetServerConfig(tlsConfig)
+		if err != nil {
+			log.Fatal(err)
+		}
+	*/
+
+	srvConfig, err := config.BuildSPIFFETLS(conf.SPIFFE)
 	if err != nil {
 		log.Fatal(err)
 	}
-	server := &http.Server{
-		Addr:      conf.ListenAddr,
-		TLSConfig: tlsConfig,
-		Handler:   loggingHandler,
+
+	ln, err := net.Listen("tcp", conf.ListenAddr)
+	if err != nil {
+		log.Fatal(err)
 	}
 
-	log.Fatal(server.ListenAndServeTLS(conf.TLS.Cert, conf.TLS.Key))
+	l := certloader.NewListener(ln, srvConfig)
+
+	server := &http.Server{
+		Handler: loggingHandler,
+	}
+
+	log.Fatal(server.Serve(l))
 }
 
 func migrate(migrationsDir string, conf *config.Config) {

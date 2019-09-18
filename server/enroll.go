@@ -30,6 +30,7 @@ import (
 	"github.com/square/sharkey/server/config"
 
 	"github.com/gorilla/mux"
+	"github.com/spiffe/spire/pkg/common/idutil"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -45,11 +46,7 @@ func (c *context) Enroll(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	hostname := vars["hostname"]
 
-	if !clientAuthenticated(r) {
-		http.Error(w, "no client certificate provided", http.StatusUnauthorized)
-		return
-	}
-	if !clientHostnameMatches(hostname, r) {
+	if !clientHostnameMatches(hostname, r) && !clientSPIFFEIDMatches(hostname, r) {
 		http.Error(w, "hostname does not match certificate", http.StatusForbidden)
 		return
 	}
@@ -110,6 +107,46 @@ func clientHostnameMatches(hostname string, r *http.Request) bool {
 	}
 	cert := conn.VerifiedChains[0][0]
 	return cert.VerifyHostname(hostname) == nil
+}
+
+// clientSPIFFEIDMatches returns true if the client matches the hostname
+// in the SPIFFE ID.
+// The expectation is that hostname will be present the SPIFFE ID path
+// Note: Because of the way VerifyPeerCertificate works with SPIFFE certs,
+// r.TLS.VerifiedChains is not populated by the Go's TLS stack, so we have rely
+// on conn.PeerCertificates. However, we're ok with that because appropriate verification
+// has taken place.
+func clientSPIFFEIDMatches(hostname string, r *http.Request) bool {
+	conn := r.TLS
+	if len(conn.PeerCertificates) == 0 {
+		log.Print("[clientSPIFFEIDMatches] no PeerCertificates")
+		return false
+	}
+	cert := conn.PeerCertificates[0]
+
+	if len(cert.URIs) == 0 || cert.URIs[0] == nil {
+		log.Print("[clientSPIFFEIDMatches] no URIs in the leaf cert")
+		return false
+	}
+
+	spiffeIDURL := cert.URIs[0]
+	// TOOD: this should be tied to the trust domain that is configured for each env
+	err := idutil.ValidateSpiffeIDURL(spiffeIDURL, idutil.AllowAnyTrustDomainWorkload())
+	if err != nil {
+		log.Print("[clientSPIFFEIDMatches] invalid SPIFFE ID: ", err)
+		return false
+	}
+
+	// the hostname should be included in the SPIFFE ID, separated by '/'
+	for _, segment := range strings.Split(spiffeIDURL.Path, "/") {
+		if hostname == segment {
+			return true
+		}
+	}
+
+	log.Printf("[clientSPIFFEIDMatches] hostname '%s' didn't match SPIFFE ID '%s'", hostname, spiffeIDURL.String())
+
+	return false
 }
 
 func (c *context) signHost(hostname string, serial uint64, pubkey ssh.PublicKey) (*ssh.Certificate, error) {

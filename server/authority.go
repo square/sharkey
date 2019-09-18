@@ -23,10 +23,12 @@ import (
 )
 
 func (c *context) Authority(w http.ResponseWriter, r *http.Request) {
-	if !clientAuthenticated(r) {
-		http.Error(w, "no client certificate provided", http.StatusUnauthorized)
-		return
-	}
+	/*
+		if !clientAuthenticated(r) {
+			http.Error(w, "no client certificate provided", http.StatusUnauthorized)
+			return
+		}
+	*/
 
 	_, _ = w.Write([]byte("@cert-authority * "))
 	_, _ = w.Write(ssh.MarshalAuthorizedKey(c.signer.PublicKey()))

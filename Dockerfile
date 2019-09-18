@@ -26,7 +26,7 @@ COPY . /go/src/github.com/square/sharkey
 RUN cd /go/src/github.com/square/sharkey && \
     cp docker.sh /usr/bin/entrypoint.sh && \
     chmod +x /usr/bin/entrypoint.sh && \
-    go build -v -o /usr/bin/sharkey-server ./server && \
+    go build -tags nopkcs11 -v -o /usr/bin/sharkey-server ./server && \
     rm -rf /go/src/*
 
 ENTRYPOINT ["/usr/bin/entrypoint.sh"]
