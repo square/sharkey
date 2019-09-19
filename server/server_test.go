@@ -17,11 +17,11 @@
 package main
 
 import (
-	"bytes"
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -38,114 +38,166 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
+const (
+	testKey = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCsfClUt72oaV+J4mAe3XK1nPqXn9ISTxRNj" +
+		"giXNYhmVvluwrtS5o0Fwc144c1pqW38QilcvCNmaiXvPxdaSyzTnVCg8UGlNsa/Fwz5Lc/hojAoQCitiRxBna81VSGZI" +
+		"Ob79JD4lVxGxDOfVykfvjo4KzfDE4stMPixW6grDlpUsb6MVELUB1jcyx+j6RVctPYuRtZKLI/5SX6NGWK3H6P68IhY+" +
+		"2MKYIc6+TItabryI0cNTIcjkPyetAo2T1BOl8sPeukIvX3zG2NrxxinXrEWScYpsuoewvuCYdc/+fY2o498PwM+asCpQ" +
+		"i+3IRj7siWEDLwK0kga+aYrwyO2/TiB"
+)
+
 func TestValidClient(t *testing.T) {
 	goodName := "goodname"
 	badName := "badname"
-	request, err := generateRequest()
-	if err != nil {
-		t.Fatalf("Error reading test ssh key: %s", err.Error())
-	}
-	if clientHostnameMatches(badName, request) {
-		t.Fatalf("thought a bad client was valid")
-	}
-	if !clientHostnameMatches(goodName, request) {
-		t.Fatalf("thought a good client was invalid")
-	}
+	request, err := generateHostRequest()
+	require.NoError(t, err, "error reading test ssh key")
+
+	res := clientHostnameMatches(badName, request)
+	require.False(t, res, "thought a bad client was valid")
+
+	res = clientHostnameMatches(goodName, request)
+	require.True(t, res, "thought a good client was invalid")
 }
 
 func TestSignHost(t *testing.T) {
 	c, err := generateContext(t)
-	if err != nil {
-		t.Fatalf("error generating context: %s", err.Error())
-	}
+	require.NoError(t, err)
+
 	data, err := ioutil.ReadFile("testdata/ssh_host_rsa_key.pub")
-	if err != nil {
-		t.Fatalf("error reading test ssh host key: %s", err.Error())
-	}
+	require.NoError(t, err)
+
 	pubkey, _, _, _, err := ssh.ParseAuthorizedKey(data)
-	if err != nil {
-		t.Fatalf("error parsing test ssh host key: %s", err.Error())
-	}
+	require.NoError(t, err)
 
 	cert, err := c.signHost("hostname.square", 42, pubkey)
-	if err != nil {
-		t.Fatalf("SignHost method returned an error: %s", err.Error())
-	}
-	if cert.Serial != 42 {
-		t.Fatalf("Incorrect cert serial number: %s", err.Error())
-	}
-	if cert.KeyId != "hostname.square" {
-		t.Fatal("Incorrect cert keyId")
-	}
-	if cert.Key != pubkey {
-		t.Fatal("Cert pubkey doesn't match")
-	}
-	assertPrincipal(t, cert.ValidPrincipals, "hostname.square")
-	assertPrincipal(t, cert.ValidPrincipals, "alias.square")
-}
-
-func assertPrincipal(t *testing.T, principals []string, expected string) {
-	for _, principal := range principals {
-		if principal == expected {
-			return
-		}
-	}
-	t.Errorf("cert is missing expected principal: %s", expected)
+	require.NoError(t, err, "SignHost method returned an error")
+	require.Equal(t, uint64(42), cert.Serial, "Incorrect cert serial number")
+	require.Equal(t, "hostname.square", cert.KeyId, "Cert pubkey doesn't match")
+	require.Equal(t, pubkey, cert.Key, "Cert pubkey doesn't match")
+	require.Contains(t, cert.ValidPrincipals, "hostname.square")
+	require.Contains(t, cert.ValidPrincipals, "alias.square")
 }
 
 func TestEnrollHost(t *testing.T) {
 	c, err := generateContext(t)
-	if err != nil {
-		t.Fatalf("Error generating context: %s", err.Error())
+	require.NoError(t, err)
+
+	for i := 0; i < 5; i++ {
+		request, err := generateHostRequest()
+		require.NoError(t, err, "Error reading test ssh key")
+
+		_, err = c.EnrollHost("goodname", request)
+		require.NoError(t, err, "Error enrolling host")
+	}
+}
+
+func TestEnrollUser(t *testing.T) {
+	hostname := "proxy"
+	header := "X-Forwarded-User"
+	c, err := generateContext(t)
+	require.NoError(t, err)
+
+	// set auth proxy
+	c.conf.AuthenticatingProxy = &config.AuthenticatingProxy{
+		Hostname:       hostname,
+		UsernameHeader: header,
 	}
 
 	for i := 0; i < 5; i++ {
-		request, err := generateRequest()
-		if err != nil {
-			t.Fatalf("Error reading test ssh key: %s", err.Error())
-		}
-		_, err = c.EnrollHost("goodname", request)
-		if err != nil {
-			t.Fatalf("Error enrolling host: %s", err.Error())
-		}
+		request, err := generateUserRequest(hostname)
+		request.Header.Set(header, "alice")
+		require.NoError(t, err, "Error reading test ssh key")
+
+		rr := httptest.NewRecorder()
+		c.EnrollUser(rr, request)
+		res := rr.Result()
+		body, err := ioutil.ReadAll(res.Body)
+		fmt.Println(string(body))
+		require.NoError(t, err, "unexpected error reading body")
+		require.Equal(t, 200, res.StatusCode, "failed to enroll user")
 	}
+}
+
+func TestEnrollUserNoProxyConfigured(t *testing.T) {
+	c, err := generateContext(t)
+	require.NoError(t, err)
+
+	request, err := generateUserRequest("proxy")
+	require.NoError(t, err)
+
+	rr := httptest.NewRecorder()
+	c.EnrollUser(rr, request)
+	res := rr.Result()
+	_, err = ioutil.ReadAll(res.Body)
+	require.NoError(t, err, "unexpected error reading body")
+	require.Equal(t, 404, res.StatusCode, "expected 404 for unconfigured proxy")
+}
+
+func TestEnrollNoAuthedUser(t *testing.T) {
+	hostname := "proxy"
+	c, err := generateContext(t)
+	require.NoError(t, err)
+
+	// set auth proxy
+	c.conf.AuthenticatingProxy = &config.AuthenticatingProxy{
+		Hostname: hostname,
+	}
+
+	request, err := generateUserRequest(hostname)
+	require.NoError(t, err)
+
+	rr := httptest.NewRecorder()
+	c.EnrollUser(rr, request)
+	res := rr.Result()
+	_, err = ioutil.ReadAll(res.Body)
+	require.NoError(t, err, "unexpected error reading body")
+	require.Equal(t, 401, res.StatusCode, "expected 401 for unauthed user")
+}
+
+func TestEnrollWrongProxyDomain(t *testing.T) {
+	hostname := "proxy"
+	header := "X-Forwarded-User"
+	c, err := generateContext(t)
+	require.NoError(t, err)
+
+	// set auth proxy
+	c.conf.AuthenticatingProxy = &config.AuthenticatingProxy{
+		Hostname:       hostname,
+		UsernameHeader: header,
+	}
+
+	request, err := generateUserRequest("notproxy.com")
+	request.Header.Set(header, "alice")
+	require.NoError(t, err)
+
+	rr := httptest.NewRecorder()
+	c.EnrollUser(rr, request)
+	res := rr.Result()
+	_, err = ioutil.ReadAll(res.Body)
+	require.NoError(t, err, "unexpected error reading body")
+	require.Equal(t, 401, res.StatusCode, "expected 401 for requets not from proxy")
 }
 
 func TestGetAuthority(t *testing.T) {
 	c, err := generateContext(t)
-	if err != nil {
-		t.Fatalf("Error generating context: %s", err)
-	}
+	require.NoError(t, err)
 
-	req, err := generateRequest()
-	if err != nil {
-		t.Fatalf("Error generating context: %s", err)
-	}
+	req, err := generateHostRequest()
+	require.NoError(t, err, "Error reading test ssh key")
 
 	rec := httptest.NewRecorder()
 	c.Authority(rec, req)
 
 	rec.Flush()
-	if rec.Code != 200 {
-		t.Fatalf("Request to /authority failed with %d", rec.Code)
-	}
+	require.Equalf(t, 200, rec.Code, "Request to /authority failed with %d", rec.Code)
 
 	body, _ := ioutil.ReadAll(rec.Body)
 	expected, err := ioutil.ReadFile("testdata/server_ca.pub")
-	if err != nil {
-		t.Fatalf("Error reading testdata: %s", err)
-	}
+	require.NoError(t, err, "Error reading testdata")
 
-	if !bytes.Equal(body, []byte(fmt.Sprintf("@cert-authority * %s", expected))) {
-		t.Fatalf("Request body from /authority unexpectedly returned '%s'", string(body))
-	}
+	require.Equalf(t, []byte(fmt.Sprintf("@cert-authority * %s", expected)), body,
+		"Request body from /authority unexpectedly returned '%s'", string(body))
 }
-
-const testKey string = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCsfClUt72oaV+J4mAe3XK1nPqXn9ISTxRNj" +
-	"giXNYhmVvluwrtS5o0Fwc144c1pqW38QilcvCNmaiXvPxdaSyzTnVCg8UGlNsa/Fwz5Lc/hojAoQCitiRxBna81VSGZI" +
-	"Ob79JD4lVxGxDOfVykfvjo4KzfDE4stMPixW6grDlpUsb6MVELUB1jcyx+j6RVctPYuRtZKLI/5SX6NGWK3H6P68IhY+" +
-	"2MKYIc6+TItabryI0cNTIcjkPyetAo2T1BOl8sPeukIvX3zG2NrxxinXrEWScYpsuoewvuCYdc/+fY2o498PwM+asCpQ" +
-	"i+3IRj7siWEDLwK0kga+aYrwyO2/TiB"
 
 func TestGetKnownHosts(t *testing.T) {
 	c, err := generateContext(t)
@@ -163,9 +215,7 @@ func TestGetKnownHosts(t *testing.T) {
 	results := strings.Split(result, "\n")
 	assert.EqualValues(t, 3, len(results))
 	assert.Equal(t, "@certificate-authority * pubkey", results[0])
-
 	assert.Equal(t, "hostname "+testKey, results[1])
-
 	assert.Equal(t, "", results[2])
 }
 
@@ -173,27 +223,23 @@ func TestStatus(t *testing.T) {
 	c, err := generateContext(t)
 	require.NoError(t, err)
 
-	req, err := generateRequest()
+	req, err := generateHostRequest()
 	require.NoError(t, err)
 
 	rec := httptest.NewRecorder()
 	c.Status(rec, req)
 
 	rec.Flush()
-	if rec.Code != 200 {
-		t.Fatalf("Request to /_status failed with %d", rec.Code)
-	}
+	require.Equalf(t, 200, rec.Code, "Request to /_status failed with %d", rec.Code)
 
 	body, _ := ioutil.ReadAll(rec.Body)
 	expected := []byte(`{"ok":true,"status":"ok","messages":[]}`)
 
-	if !bytes.Equal(body, expected) {
-		t.Fatalf("Request body from /_status unexpectedly returned '%s'", string(body))
-	}
+	require.Equalf(t, expected, body,
+		"Request body from /_status unexpectedly returned '%s'", string(body))
 
-	if contentType := rec.Header().Get("Content-Type"); contentType != "application/json" {
-		t.Fatalf("Expected Content-Type to be set to 'application/json', but instead got %s", contentType)
-	}
+	require.Equalf(t, "application/json", rec.Header().Get("Content-Type"),
+		"Expected Content-Type to be set to 'application/json', but instead got %s", rec.Header().Get("Content-Type"))
 }
 
 func generateContext(t *testing.T) (*context, error) {
@@ -230,9 +276,9 @@ func generateContext(t *testing.T) (*context, error) {
 	return c, nil
 }
 
-func generateRequest() (*http.Request, error) {
+func generateRequest(cn string, body io.ReadCloser) (*http.Request, error) {
 	sub := pkix.Name{
-		CommonName: "goodname",
+		CommonName: cn,
 	}
 	cert := x509.Certificate{
 		Subject: sub,
@@ -241,14 +287,27 @@ func generateRequest() (*http.Request, error) {
 	conn := tls.ConnectionState{
 		VerifiedChains: chain,
 	}
+
+	request := http.Request{
+		TLS:    &conn,
+		Body:   body,
+		Header: http.Header{},
+	}
+	return &request, nil
+}
+
+func generateUserRequest(commonName string) (*http.Request, error) {
+	key, err := os.Open("testdata/ssh_alice_rsa.pub")
+	if err != nil {
+		return nil, err
+	}
+	return generateRequest(commonName, ioutil.NopCloser(key))
+}
+
+func generateHostRequest() (*http.Request, error) {
 	key, err := os.Open("testdata/ssh_host_rsa_key.pub")
 	if err != nil {
 		return nil, err
 	}
-	readCloser := ioutil.NopCloser(key)
-	request := http.Request{
-		TLS:  &conn,
-		Body: readCloser,
-	}
-	return &request, nil
+	return generateRequest("goodname", ioutil.NopCloser(key))
 }

@@ -156,39 +156,31 @@ func (c *context) sign(keyId string, principals []string, serial uint64, certTyp
 
 // This assumes there's an authenticating proxy which provides the user in a header, configurable.
 // We identify the proxy with its TLS client cert
-// TODO: this function needs test coverage
-func proxyAuthenticated(ap *config.AuthenticatingProxy, requestedUser string, w http.ResponseWriter, r *http.Request) bool {
+func proxyAuthenticated(ap *config.AuthenticatingProxy, w http.ResponseWriter, r *http.Request) (string, bool) {
+	if ap == nil {
+		// Client certificates are not configured
+		logHttpError(r, w, errors.New("client certificates are unavailable"), http.StatusNotFound)
+		return "", false
+	}
+
 	if !(clientAuthenticated(r) && clientHostnameMatches(ap.Hostname, r)) {
 		logHttpError(r, w, fmt.Errorf("request didn't come from proxy"), http.StatusUnauthorized)
-		return false
+		return "", false
 	}
 
-	userAuthed := r.Header.Get(ap.UsernameHeader)
-	if userAuthed == "" { // Shouldn't happen
+	user := r.Header.Get(ap.UsernameHeader)
+	if user == "" { // Shouldn't happen
 		logHttpError(r, w, errors.New("no username supplied"), http.StatusUnauthorized)
-		return false
+		return "", false
 	}
 
-	if requestedUser != userAuthed {
-		logHttpError(r, w, fmt.Errorf("%s cannot request client cert for %s", userAuthed, requestedUser), http.StatusForbidden)
-		return false
-	}
-
-	// We've got a valid connection from the authenticating proxy, and the username matches the requested one.
-	return true
+	// We've got a valid connection from the authenticating proxy.
+	return user, true
 }
 
 func (c *context) EnrollUser(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	user := vars["user"]
-
-	if c.conf.AuthenticatingProxy == nil {
-		// Client certificates are not configured
-		logHttpError(r, w, errors.New("client certificates are unavailable"), http.StatusNotFound)
-		return
-	}
-
-	if !proxyAuthenticated(c.conf.AuthenticatingProxy, user, w, r) {
+	user, ok := proxyAuthenticated(c.conf.AuthenticatingProxy, w, r)
+	if !ok {
 		// proxyAuthenticated sets http status & logs message
 		return
 	}
