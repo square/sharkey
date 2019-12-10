@@ -155,12 +155,12 @@ func (c *context) enroll(hostKey string, signedCert string) {
 		return
 	}
 	defer os.Remove(tmp.Name())
-	err = os.Chmod(tmp.Name(), 0666)
+	err = os.Chmod(tmp.Name(), 0644)
 	if err != nil {
 		log.Printf("Error calling chmod on %s: %s\n", tmp.Name(), err)
 		return
 	}
-	err = ioutil.WriteFile(tmp.Name(), body, 0666)
+	err = ioutil.WriteFile(tmp.Name(), body, 0644)
 	if err != nil {
 		log.Printf("Error writing to %s: %s\n", tmp.Name(), err)
 		return
@@ -204,12 +204,12 @@ func (c *context) makeKnownHosts() {
 		return
 	}
 	defer os.Remove(tmp.Name())
-	err = os.Chmod(tmp.Name(), 0666)
+	err = os.Chmod(tmp.Name(), 0644)
 	if err != nil {
 		log.Printf("Error calling chmod on %s: %s\n", tmp.Name(), err)
 		return
 	}
-	err = ioutil.WriteFile(tmp.Name(), str, 0666)
+	err = ioutil.WriteFile(tmp.Name(), str, 0644)
 	if err != nil {
 		log.Printf("Error writing to %s: %s\n", tmp.Name(), err)
 		return
