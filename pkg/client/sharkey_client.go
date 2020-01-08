@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package main
+package client
 
 import (
 	"bytes"
@@ -27,14 +27,6 @@ import (
 	"os/exec"
 	"strings"
 	"time"
-
-	"gopkg.in/alecthomas/kingpin.v2"
-	"gopkg.in/yaml.v2"
-)
-
-var (
-	app        = kingpin.New("sharkey-client", "Certificate client of the ssh-ca system.")
-	configPath = kingpin.Flag("config", "Path to config file for client.").Required().String()
 )
 
 type tlsConfig struct {
@@ -46,7 +38,7 @@ type hostKey struct {
 	SignedCert string `yaml:"signed"`
 }
 
-type config struct {
+type Config struct {
 	TLS                       tlsConfig `yaml:"tls"`
 	RequestAddr               string    `yaml:"request_addr"`
 	HostKey                   string    `yaml:"host_key"`    // deprecated
@@ -59,26 +51,14 @@ type config struct {
 	SSHReload                 []string  `yaml:"ssh_reload"`
 }
 
-type context struct {
-	conf   *config
+type Client struct {
+	conf   *Config
 	client *http.Client
 }
 
-func main() {
-	log.Println("Starting client")
-	kingpin.Version("0.0.1")
-	kingpin.Parse()
-	data, err := ioutil.ReadFile(*configPath)
-	if err != nil {
-		log.Fatalf("Error reading config file: %s\n", err)
-	}
-
-	var conf config
-	if err := yaml.Unmarshal(data, &conf); err != nil {
-		log.Fatalf("Error parsing config file: %s\n", err)
-	}
-	c := &context{
-		conf: &conf,
+func Run(conf *Config) {
+	c := &Client{
+		conf: conf,
 	}
 
 	if len(c.conf.HostKeys) == 0 {
@@ -90,7 +70,7 @@ func main() {
 		log.Fatalf("Options host_key/signed_cert and host_keys are mutually exclusive")
 	}
 
-	if err = c.GenerateClient(); err != nil {
+	if err := c.GenerateClient(); err != nil {
 		log.Fatalf("Error generating http client: %s\n", err)
 	}
 
@@ -122,7 +102,7 @@ func main() {
 	}
 }
 
-func (c *context) enroll(hostKey string, signedCert string) {
+func (c *Client) enroll(hostKey string, signedCert string) {
 	hostname, err := os.Hostname()
 	if err != nil {
 		// Should be impossible
@@ -170,12 +150,12 @@ func (c *context) enroll(hostKey string, signedCert string) {
 	c.shellOut([]string{"/bin/mv", tmp.Name(), signedCert})
 }
 
-func (c *context) reloadSSH() {
+func (c *Client) reloadSSH() {
 	log.Println("Restarting SSH daemon to make it pick up new certificate")
 	c.shellOut(c.conf.SSHReload)
 }
 
-func (c *context) makeKnownHosts() {
+func (c *Client) makeKnownHosts() {
 	var knownHosts string
 	if c.conf.KnownHostsAuthoritiesOnly {
 		knownHosts = "/authority"
@@ -219,7 +199,7 @@ func (c *context) makeKnownHosts() {
 	c.shellOut([]string{"/bin/mv", tmp.Name(), c.conf.KnownHosts})
 }
 
-func (c *context) GenerateClient() error {
+func (c *Client) GenerateClient() error {
 	tlsConfig, err := buildConfig(c.conf.TLS.Ca)
 	if err != nil {
 		return err
@@ -263,7 +243,7 @@ func buildConfig(caBundlePath string) (*tls.Config, error) {
 	}, nil
 }
 
-func (c *context) shellOut(command []string) {
+func (c *Client) shellOut(command []string) {
 	if len(command) == 0 {
 		return
 	}

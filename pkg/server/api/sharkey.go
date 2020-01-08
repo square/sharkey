@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package main
+package api
 
 import (
 	"encoding/json"
@@ -23,27 +23,14 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/square/sharkey/server/config"
-	"github.com/square/sharkey/server/storage"
+	"github.com/square/sharkey/pkg/server/config"
+	"github.com/square/sharkey/pkg/server/storage"
 
 	_ "bitbucket.org/liamstask/goose/lib/goose"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	_ "github.com/mattn/go-sqlite3"
 	"golang.org/x/crypto/ssh"
-	"gopkg.in/alecthomas/kingpin.v2"
-)
-
-var (
-	app        = kingpin.New("sharkey-server", "Certificate issuer of the ssh-ca system.")
-	configPath = app.Flag("config", "Path to config file for server.").Required().ExistingFile()
-
-	// Start server
-	startCmd = app.Command("start", "Run the sharkey server.")
-
-	// Run migrations
-	migrateCmd    = app.Command("migrate", "Set up database/run migrations.")
-	migrationsDir = migrateCmd.Flag("migrations", "Path to migrations directory.").ExistingDir()
 )
 
 type statusResponse struct {
@@ -52,51 +39,35 @@ type statusResponse struct {
 	Messages []string `json:"messages"`
 }
 
-type context struct {
+type Api struct {
 	signer  ssh.Signer
 	storage storage.Storage
 	conf    *config.Config
 }
 
-func main() {
-	log.Print("Starting server")
-	app.Version("0.0.1")
-	command := kingpin.MustParse(app.Parse(os.Args[1:]))
-
-	conf, err := config.Load(*configPath)
-	if err != nil {
-		log.Fatalf("Error loading configuration file: %v", err)
-	}
-
-	switch command {
-	case startCmd.FullCommand():
-		startServer(&conf)
-	case migrateCmd.FullCommand():
-		migrate(*migrationsDir, &conf)
-	}
-}
-
-func startServer(conf *config.Config) {
+func Run(conf *config.Config) {
 	log.Print("Starting http server")
-	c := &context{
-		conf: conf,
-	}
-
-	privateKey, err := ioutil.ReadFile(c.conf.SigningKey)
+	privateKey, err := ioutil.ReadFile(conf.SigningKey)
 	if err != nil {
 		log.Fatalf("unable to read signing key file: %s", err)
 	}
 
-	c.signer, err = ssh.ParsePrivateKey(privateKey)
+	signer, err := ssh.ParsePrivateKey(privateKey)
 	if err != nil {
 		log.Fatalf("unable to parse signing key data: %s", err)
 	}
 
-	c.storage, err = storage.FromConfig(c.conf.Database)
+	storage, err := storage.FromConfig(conf.Database)
 	if err != nil {
 		log.Fatalf("unable to setup database: %s", err)
 	}
-	defer c.storage.Close()
+	defer storage.Close()
+
+	c := Api {
+		conf: conf,
+		signer: signer,
+		storage: storage,
+	}
 
 	handler := mux.NewRouter()
 	handler.Path("/enroll/{hostname}").Methods("POST").HandlerFunc(c.Enroll)
@@ -118,7 +89,7 @@ func startServer(conf *config.Config) {
 	log.Fatal(server.ListenAndServeTLS(conf.TLS.Cert, conf.TLS.Key))
 }
 
-func migrate(migrationsDir string, conf *config.Config) {
+func Migrate(migrationsDir string, conf *config.Config) {
 	db, err := storage.FromConfig(conf.Database)
 	if err != nil {
 		log.Fatalf("unable to setup database: %s", err.Error())
@@ -130,7 +101,7 @@ func migrate(migrationsDir string, conf *config.Config) {
 	}
 }
 
-func (c *context) Status(w http.ResponseWriter, r *http.Request) {
+func (c *Api) Status(w http.ResponseWriter, r *http.Request) {
 	resp := statusResponse{
 		Ok:       true,
 		Status:   "ok",

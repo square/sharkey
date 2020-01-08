@@ -9,7 +9,7 @@ import (
 	"bitbucket.org/liamstask/goose/lib/goose"
 
 	_ "github.com/mattn/go-sqlite3"
-	"github.com/square/sharkey/server/config"
+	"github.com/square/sharkey/pkg/server/config"
 )
 
 // SqliteStorage implements the storage interface, using Sqlite for storage.

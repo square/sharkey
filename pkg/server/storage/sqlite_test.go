@@ -5,7 +5,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/square/sharkey/server/config"
+	"github.com/square/sharkey/pkg/server/config"
 	"github.com/stretchr/testify/require"
 )
 
@@ -17,7 +17,7 @@ func TestSqlite(t *testing.T) {
 	cfg := config.Database{Address: dbfile.Name()}
 	storage, err := NewSqlite(cfg)
 	require.NoError(t, err)
-	require.NoError(t, storage.Migrate("../../db/sqlite/migrations"))
+	require.NoError(t, storage.Migrate("../../../db/sqlite/migrations"))
 
 	testStorage(t, storage)
 }

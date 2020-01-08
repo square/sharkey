@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package main
+package api
 
 import (
 	"bytes"
@@ -23,7 +23,7 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-func (c *context) KnownHosts(w http.ResponseWriter, r *http.Request) {
+func (c *Api) KnownHosts(w http.ResponseWriter, r *http.Request) {
 	if !clientAuthenticated(r) {
 		http.Error(w, "no client certificate provided", http.StatusUnauthorized)
 		return
@@ -37,7 +37,7 @@ func (c *context) KnownHosts(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write([]byte(hosts))
 }
 
-func (c *context) GetKnownHosts() (string, error) {
+func (c *Api) GetKnownHosts() (string, error) {
 	var buffer bytes.Buffer
 	for _, entry := range c.conf.ExtraKnownHosts {
 		buffer.WriteString(entry)
