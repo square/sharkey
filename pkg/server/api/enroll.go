@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package main
+package api
 
 import (
 	"crypto/rand"
@@ -27,7 +27,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/square/sharkey/server/config"
+	"github.com/square/sharkey/pkg/server/config"
 
 	"github.com/gorilla/mux"
 	"golang.org/x/crypto/ssh"
@@ -41,7 +41,7 @@ func logHttpError(r *http.Request, w http.ResponseWriter, err error, code int) {
 	http.Error(w, err.Error(), code)
 }
 
-func (c *context) Enroll(w http.ResponseWriter, r *http.Request) {
+func (c *Api) Enroll(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	hostname := vars["hostname"]
 
@@ -79,7 +79,7 @@ func encodeCert(certificate *ssh.Certificate) (string, error) {
 	return fmt.Sprintf("%s-cert-v01@openssh.com %s\n", certificate.Key.Type(), certString), nil
 }
 
-func (c *context) EnrollHost(hostname string, r *http.Request) (string, error) {
+func (c *Api) EnrollHost(hostname string, r *http.Request) (string, error) {
 	pubkey, err := readPubkey(r)
 	if err != nil {
 		return "", err
@@ -112,7 +112,7 @@ func clientHostnameMatches(hostname string, r *http.Request) bool {
 	return cert.VerifyHostname(hostname) == nil
 }
 
-func (c *context) signHost(hostname string, serial uint64, pubkey ssh.PublicKey) (*ssh.Certificate, error) {
+func (c *Api) signHost(hostname string, serial uint64, pubkey ssh.PublicKey) (*ssh.Certificate, error) {
 	principals := []string{hostname}
 	if c.conf.StripSuffix != "" && strings.HasSuffix(hostname, c.conf.StripSuffix) {
 		principals = append(principals, strings.TrimSuffix(hostname, c.conf.StripSuffix))
@@ -123,7 +123,7 @@ func (c *context) signHost(hostname string, serial uint64, pubkey ssh.PublicKey)
 	return c.sign(hostname, principals, serial, ssh.HostCert, pubkey)
 }
 
-func (c *context) sign(keyId string, principals []string, serial uint64, certType uint32, pubkey ssh.PublicKey) (*ssh.Certificate, error) {
+func (c *Api) sign(keyId string, principals []string, serial uint64, certType uint32, pubkey ssh.PublicKey) (*ssh.Certificate, error) {
 	nonce := make([]byte, 32)
 	_, err := rand.Read(nonce)
 	if err != nil {
@@ -178,7 +178,7 @@ func proxyAuthenticated(ap *config.AuthenticatingProxy, w http.ResponseWriter, r
 	return user, true
 }
 
-func (c *context) EnrollUser(w http.ResponseWriter, r *http.Request) {
+func (c *Api) EnrollUser(w http.ResponseWriter, r *http.Request) {
 	user, ok := proxyAuthenticated(c.conf.AuthenticatingProxy, w, r)
 	if !ok {
 		// proxyAuthenticated sets http status & logs message

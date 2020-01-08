@@ -1,5 +1,5 @@
-sharkey-server
-sharkey-client
-/server/server
-/client/client
+/sharkey-server
+/sharkey-client
+/cmd/sharkey-server/sharkey-server
+/cmd/sharkey-client/sharkey-client
 .data

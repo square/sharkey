@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"testing"
 
-	"github.com/square/sharkey/server/config"
+	"github.com/square/sharkey/pkg/server/config"
 	"github.com/stretchr/testify/require"
 )
 
@@ -44,7 +44,7 @@ func TestMysql(t *testing.T) {
 	purge(t, storage.DB)
 
 	// Run migrations.
-	require.NoError(t, storage.Migrate("../../db/mysql/migrations"))
+	require.NoError(t, storage.Migrate("../../../db/mysql/migrations"))
 
 	require.NoError(t, storage.Ping())
 

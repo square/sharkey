@@ -10,7 +10,7 @@ import (
 
 	"golang.org/x/crypto/ssh"
 
-	"github.com/square/sharkey/server/config"
+	"github.com/square/sharkey/pkg/server/config"
 )
 
 type Storage interface {

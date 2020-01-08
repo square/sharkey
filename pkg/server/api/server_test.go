@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package main
+package api
 
 import (
 	"crypto/tls"
@@ -29,8 +29,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/square/sharkey/server/config"
-	"github.com/square/sharkey/server/storage"
+	"github.com/square/sharkey/pkg/server/config"
+	"github.com/square/sharkey/pkg/server/storage"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -242,7 +242,7 @@ func TestStatus(t *testing.T) {
 		"Expected Content-Type to be set to 'application/json', but instead got %s", rec.Header().Get("Content-Type"))
 }
 
-func generateContext(t *testing.T) (*context, error) {
+func generateContext(t *testing.T) (*Api, error) {
 	conf := &config.Config{
 		SigningKey:       "testdata/server_ca",
 		HostCertDuration: "160h",
@@ -264,10 +264,10 @@ func generateContext(t *testing.T) (*context, error) {
 	// in-memory sqlite: see https://github.com/mattn/go-sqlite3 for address docs
 	sqlite, err := storage.NewSqlite(config.Database{Address: ":memory:"})
 	require.NoError(t, err)
-	err = sqlite.Migrate("../db/sqlite/migrations")
+	err = sqlite.Migrate("../../../db/sqlite/migrations")
 	require.NoError(t, err)
 
-	c := &context{
+	c := &Api{
 		signer:  signer,
 		storage: sqlite,
 		conf:    conf,

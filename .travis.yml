@@ -18,14 +18,13 @@ go:
   - '1.x'
 
 install:
-  - go build -o sharkey-server -v ./server
-  - go build -o sharkey-client -v ./client
+  - go build -o sharkey-server -v ./cmd/sharkey-server
+  - go build -o sharkey-client -v ./cmd/sharkey-client
   - docker build -t server:latest -f Dockerfile .
   - docker build -t client:latest -f DockerfileClientTest .
 
 script:
   # Unit tests
-  - go test -v ./server
-  - go test -v ./client
+  - go test -v ./...
   # Integration tests
   - ./integration-test.sh

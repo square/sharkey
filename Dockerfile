@@ -11,7 +11,7 @@
 
 FROM golang:alpine
 
-MAINTAINER Cedric Staub "cs@squareup.com"
+MAINTAINER Matthew McPherrin "mmc@squareup.com"
 
 # Install CGO deps
 RUN apk add --update git mercurial gcc musl-dev && \
@@ -26,7 +26,7 @@ COPY . /go/src/github.com/square/sharkey
 RUN cd /go/src/github.com/square/sharkey && \
     cp docker.sh /usr/bin/entrypoint.sh && \
     chmod +x /usr/bin/entrypoint.sh && \
-    go build -v -o /usr/bin/sharkey-server ./server && \
+    go build -v -o /usr/bin/sharkey-server ./cmd/sharkey-server && \
     rm -rf /go/src/*
 
 ENTRYPOINT ["/usr/bin/entrypoint.sh"]

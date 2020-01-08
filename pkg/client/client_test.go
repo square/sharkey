@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package main
+package client
 
 import (
 	"fmt"
@@ -29,9 +29,9 @@ func TestEnroll(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintln(w, "Test response")
 	}))
-	c, err := generateContext(ts.URL)
+	c, err := generateClient(ts.URL)
 	if err != nil {
-		t.Fatalf("error generating context: %s", err.Error())
+		t.Fatalf("error generating Client: %s", err.Error())
 	}
 	defer cleanup(c)
 	defer ts.Close()
@@ -49,9 +49,9 @@ func TestKnownHosts(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintln(w, "Test response")
 	}))
-	c, err := generateContext(ts.URL)
+	c, err := generateClient(ts.URL)
 	if err != nil {
-		t.Fatalf("error generating context: %s", err.Error())
+		t.Fatalf("error generating Client: %s", err.Error())
 	}
 	defer cleanup(c)
 	defer ts.Close()
@@ -65,7 +65,7 @@ func TestKnownHosts(t *testing.T) {
 	}
 }
 
-func generateContext(url string) (*context, error) {
+func generateClient(url string) (*Client, error) {
 	signedCertTmp, err := ioutil.TempFile("", "sharkey-test")
 	if err != nil {
 		panic(err)
@@ -76,21 +76,20 @@ func generateContext(url string) (*context, error) {
 		panic(err)
 	}
 
-	conf := &config{
+	conf := Config{
 		RequestAddr: url,
 		HostKeys: []hostKey{
 			{"testdata/ssh_host_rsa_key.pub", signedCertTmp.Name()},
 		},
 		KnownHosts: knownHostsTmp.Name(),
 	}
-	c := &context{
-		conf:   conf,
+	return &Client{
+		conf:   &conf,
 		client: &http.Client{},
-	}
-	return c, nil
+	}, nil
 }
 
-func cleanup(c *context) {
+func cleanup(c *Client) {
 	os.Remove(c.conf.SignedCert)
 	os.Remove(c.conf.KnownHosts)
 }

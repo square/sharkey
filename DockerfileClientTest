@@ -2,7 +2,9 @@
 #
 # Not intended to be used for an actual setup
 FROM golang
-MAINTAINER Christopher Denny <chris.denny@utexas.edu>
+
+MAINTAINER Matthew McPherrin "mmc@squareup.com"
+
 RUN apt-get update && apt-get install -y openssh-server
 RUN mkdir /var/run/sshd
 RUN echo 'root:password' | chpasswd
@@ -21,7 +23,7 @@ COPY . /go/src/github.com/square/sharkey
 
 ENV GO111MODULE=on
 RUN cd /go/src/github.com/square/sharkey && \
-	go build -v -o /usr/bin/sharkey-client ./client && \
+	go build -v -o /usr/bin/sharkey-client ./cmd/sharkey-client && \
     cp test/integration/client_entry.sh /usr/bin/entrypoint.sh && \
     chmod +x /usr/bin/entrypoint.sh
 

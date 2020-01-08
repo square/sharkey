@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package main
+package api
 
 import (
 	"net/http"
@@ -22,7 +22,7 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-func (c *context) Authority(w http.ResponseWriter, r *http.Request) {
+func (c *Api) Authority(w http.ResponseWriter, r *http.Request) {
 	if !clientAuthenticated(r) {
 		http.Error(w, "no client certificate provided", http.StatusUnauthorized)
 		return

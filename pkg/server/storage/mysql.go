@@ -8,7 +8,7 @@ import (
 
 	"bitbucket.org/liamstask/goose/lib/goose"
 	"github.com/go-sql-driver/mysql"
-	"github.com/square/sharkey/server/config"
+	"github.com/square/sharkey/pkg/server/config"
 )
 
 // MysqlStorage implements the storage interface, using Mysql for storage.
