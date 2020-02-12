@@ -210,6 +210,9 @@ func (c *Api) EnrollUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	_, _ = w.Write([]byte(certString))
+
+	encodedPublicKey := base64.StdEncoding.EncodeToString(pk.Marshal())
+	log.Printf("EnrollUser with Public Key: %s %s User: %s", pk.Type(), encodedPublicKey, user)
 }
 
 func getDurationForCertType(cfg *config.Config, certType uint32) (time.Duration, error) {
