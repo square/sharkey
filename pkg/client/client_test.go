@@ -18,6 +18,9 @@ package client
 
 import (
 	"fmt"
+	"github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus/hooks/test"
+	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -26,6 +29,7 @@ import (
 )
 
 func TestEnroll(t *testing.T) {
+	logger, hook := test.NewNullLogger()
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintln(w, "Test response")
 	}))
@@ -35,7 +39,14 @@ func TestEnroll(t *testing.T) {
 	}
 	defer cleanup(c)
 	defer ts.Close()
-	c.enroll(c.conf.HostKeys[0].HostKey, c.conf.HostKeys[0].SignedCert)
+	c.enroll(c.conf.HostKeys[0].HostKey, c.conf.HostKeys[0].SignedCert, *logger)
+	assert.Equal(t, 2, len(hook.Entries))
+	assert.Equal(t, logrus.InfoLevel, hook.Entries[0].Level)
+	assert.Equal(t, logrus.InfoLevel, hook.Entries[1].Level)
+	assert.Equal(t, "Installing updated SSH certificate", hook.Entries[0].Message)
+	assert.Equal(t, "calling exec on commands", hook.Entries[1].Message)
+	assert.Contains(t, hook.Entries[0].Data, "signedCert")
+	assert.Contains(t, hook.Entries[1].Data, "commands")
 	data, err := ioutil.ReadFile(c.conf.HostKeys[0].SignedCert)
 	if err != nil {
 		t.Fatalf("error reading signed cert: %s", err.Error())
@@ -46,6 +57,7 @@ func TestEnroll(t *testing.T) {
 }
 
 func TestKnownHosts(t *testing.T) {
+	logger, hook := test.NewNullLogger()
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintln(w, "Test response")
 	}))
@@ -55,7 +67,7 @@ func TestKnownHosts(t *testing.T) {
 	}
 	defer cleanup(c)
 	defer ts.Close()
-	c.makeKnownHosts()
+	c.makeKnownHosts(*logger)
 	data, err := ioutil.ReadFile(c.conf.KnownHosts)
 	if err != nil {
 		t.Fatalf("error reading signed cert: %s", err.Error())
@@ -63,6 +75,13 @@ func TestKnownHosts(t *testing.T) {
 	if string(data) != "Test response\n" {
 		t.Fatalf("signed cert contains wrong info: %s", string(data))
 	}
+	assert.Equal(t, 2, len(hook.Entries))
+	assert.Equal(t, logrus.InfoLevel, hook.Entries[0].Level)
+	assert.Equal(t, logrus.InfoLevel, hook.Entries[1].Level)
+	assert.Equal(t, "Installing known_hosts file", hook.Entries[0].Message)
+	assert.Equal(t, "calling exec on commands", hook.Entries[1].Message)
+	assert.Contains(t, hook.Entries[0].Data, "KnownHosts")
+	assert.Contains(t, hook.Entries[1].Data, "commands")
 }
 
 func generateClient(url string) (*Client, error) {

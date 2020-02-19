@@ -1,11 +1,13 @@
 package main
 
 import (
+	"github.com/sirupsen/logrus"
 	"os"
 
 	"github.com/square/sharkey/pkg/client/cli"
 )
 
 func main() {
-	cli.Run(os.Args[1:])
+	var logger = logrus.New()
+	cli.Run(os.Args[1:], logger)
 }
