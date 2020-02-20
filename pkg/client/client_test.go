@@ -29,7 +29,6 @@ import (
 )
 
 func TestEnroll(t *testing.T) {
-	logger, hook := test.NewNullLogger()
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintln(w, "Test response")
 	}))
@@ -37,9 +36,10 @@ func TestEnroll(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error generating Client: %s", err.Error())
 	}
+	hook := test.NewLocal(c.logger)
 	defer cleanup(c)
 	defer ts.Close()
-	c.enroll(c.conf.HostKeys[0].HostKey, c.conf.HostKeys[0].SignedCert, *logger)
+	c.enroll(c.conf.HostKeys[0].HostKey, c.conf.HostKeys[0].SignedCert)
 	assert.Equal(t, 2, len(hook.Entries))
 	assert.Equal(t, logrus.InfoLevel, hook.Entries[0].Level)
 	assert.Equal(t, logrus.InfoLevel, hook.Entries[1].Level)
@@ -57,7 +57,6 @@ func TestEnroll(t *testing.T) {
 }
 
 func TestKnownHosts(t *testing.T) {
-	logger, hook := test.NewNullLogger()
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintln(w, "Test response")
 	}))
@@ -65,9 +64,10 @@ func TestKnownHosts(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error generating Client: %s", err.Error())
 	}
+	hook := test.NewLocal(c.logger)
 	defer cleanup(c)
 	defer ts.Close()
-	c.makeKnownHosts(*logger)
+	c.makeKnownHosts()
 	data, err := ioutil.ReadFile(c.conf.KnownHosts)
 	if err != nil {
 		t.Fatalf("error reading signed cert: %s", err.Error())
@@ -102,9 +102,13 @@ func generateClient(url string) (*Client, error) {
 		},
 		KnownHosts: knownHostsTmp.Name(),
 	}
+
+	logger, _ := test.NewNullLogger()
+
 	return &Client{
 		conf:   &conf,
 		client: &http.Client{},
+		logger: logger,
 	}, nil
 }
 

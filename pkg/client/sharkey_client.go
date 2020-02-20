@@ -54,11 +54,13 @@ type Config struct {
 type Client struct {
 	conf   *Config
 	client *http.Client
+	logger *logrus.Logger
 }
 
 func Run(conf *Config, logger *logrus.Logger) {
 	c := &Client{
-		conf: conf,
+		conf:   conf,
+		logger: logger,
 	}
 
 	if len(c.conf.HostKeys) == 0 {
@@ -67,19 +69,19 @@ func Run(conf *Config, logger *logrus.Logger) {
 			{c.conf.HostKey, c.conf.SignedCert},
 		}
 	} else if c.conf.HostKey != "" || c.conf.SignedCert != "" {
-		logger.Fatal("Options host_key/signed_cert and host_keys are mutually exclusive")
+		c.logger.Fatal("Options host_key/signed_cert and host_keys are mutually exclusive")
 	}
 
 	if err := c.GenerateClient(); err != nil {
-		logger.WithError(err).Fatalln("Error generating http client")
+		c.logger.WithError(err).Fatalln("Error generating http client")
 	}
 
-	logger.Println("Fetching updated SSH certificate from server")
+	c.logger.Println("Fetching updated SSH certificate from server")
 	for _, entry := range c.conf.HostKeys {
-		c.enroll(entry.HostKey, entry.SignedCert, *logger)
+		c.enroll(entry.HostKey, entry.SignedCert)
 	}
-	c.makeKnownHosts(*logger)
-	c.reloadSSH(*logger)
+	c.makeKnownHosts()
+	c.reloadSSH()
 
 	if c.conf.Sleep != "" {
 		sleep, err := time.ParseDuration(c.conf.Sleep)
@@ -94,15 +96,15 @@ func Run(conf *Config, logger *logrus.Logger) {
 
 			logger.Println("Fetching updated SSH certificate from server")
 			for _, entry := range c.conf.HostKeys {
-				c.enroll(entry.HostKey, entry.SignedCert, *logger)
+				c.enroll(entry.HostKey, entry.SignedCert)
 			}
-			c.makeKnownHosts(*logger)
-			c.reloadSSH(*logger)
+			c.makeKnownHosts()
+			c.reloadSSH()
 		}
 	}
 }
 
-func (c *Client) enroll(hostKey string, signedCert string, logger logrus.Logger) {
+func (c *Client) enroll(hostKey string, signedCert string) {
 	hostname, err := os.Hostname()
 	if err != nil {
 		// Should be impossible
@@ -111,7 +113,7 @@ func (c *Client) enroll(hostKey string, signedCert string, logger logrus.Logger)
 	url := c.conf.RequestAddr + "/enroll/" + hostname // host name of machine running on
 	hostkey, err := ioutil.ReadFile(hostKey)          // path to host key
 	if err != nil {
-		logger.WithFields(logrus.Fields{
+		c.logger.WithFields(logrus.Fields{
 			"hostkey": hostKey,
 			"error":   err,
 		}).Print("Error reading host key")
@@ -119,46 +121,46 @@ func (c *Client) enroll(hostKey string, signedCert string, logger logrus.Logger)
 	}
 	resp, err := c.client.Post(url, "text/plain", bytes.NewReader(hostkey))
 	if err != nil {
-		logger.WithError(err).Println("Error talking to backend")
+		c.logger.WithError(err).Println("Error talking to backend")
 		return
 	}
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		logger.WithError(err).Errorln("Error reading response from server")
+		c.logger.WithError(err).Errorln("Error reading response from server")
 		return
 	}
 	if resp.StatusCode != 200 {
-		logger.WithField("body", string(body)).Errorln("Error retrieving signed cert from server")
+		c.logger.WithField("body", string(body)).Errorln("Error retrieving signed cert from server")
 		return
 	}
 	tmp, err := ioutil.TempFile("", "sharkey-signed-cert")
 	if err != nil {
-		logger.WithError(err).Errorln("Error creating temp file")
+		c.logger.WithError(err).Errorln("Error creating temp file")
 		return
 	}
 	defer os.Remove(tmp.Name())
 	err = os.Chmod(tmp.Name(), 0644)
 	if err != nil {
-		logger.WithError(err).WithField("tmpName", tmp.Name()).Errorln("Error calling chmod")
+		c.logger.WithError(err).WithField("tmpName", tmp.Name()).Errorln("Error calling chmod")
 		return
 	}
 	err = ioutil.WriteFile(tmp.Name(), body, 0644)
 	if err != nil {
-		logger.WithError(err).WithField("tmpName", tmp.Name()).Errorln("Error writing file")
+		c.logger.WithError(err).WithField("tmpName", tmp.Name()).Errorln("Error writing file")
 		return
 	}
 
-	logger.WithField("signedCert", signedCert).Println("Installing updated SSH certificate")
-	c.shellOut([]string{"/bin/mv", tmp.Name(), signedCert}, logger)
+	c.logger.WithField("signedCert", signedCert).Println("Installing updated SSH certificate")
+	c.shellOut([]string{"/bin/mv", tmp.Name(), signedCert})
 }
 
-func (c *Client) reloadSSH(logger logrus.Logger) {
-	logger.Println("Restarting SSH daemon to make it pick up new certificate")
-	c.shellOut(c.conf.SSHReload, logger)
+func (c *Client) reloadSSH() {
+	c.logger.Println("Restarting SSH daemon to make it pick up new certificate")
+	c.shellOut(c.conf.SSHReload)
 }
 
-func (c *Client) makeKnownHosts(logger logrus.Logger) {
+func (c *Client) makeKnownHosts() {
 	var knownHosts string
 	if c.conf.KnownHostsAuthoritiesOnly {
 		knownHosts = "/authority"
@@ -168,38 +170,38 @@ func (c *Client) makeKnownHosts(logger logrus.Logger) {
 	url := c.conf.RequestAddr + knownHosts
 	resp, err := c.client.Get(url)
 	if err != nil {
-		logger.WithError(err).Errorln("Error talking to backend")
+		c.logger.WithError(err).Errorln("Error talking to backend")
 		return
 	}
 	defer resp.Body.Close()
 	str, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		logger.WithError(err).Errorln("Error reading response body")
+		c.logger.WithError(err).Errorln("Error reading response body")
 		return
 	}
 	if resp.StatusCode != 200 {
-		logger.WithField("StatusCode", resp.StatusCode).Errorln("Error retrieving known hosts file from server")
+		c.logger.WithField("StatusCode", resp.StatusCode).Errorln("Error retrieving known hosts file from server")
 		return
 	}
 	tmp, err := ioutil.TempFile("", "sharkey-known-hosts")
 	if err != nil {
-		logger.WithError(err).Errorln("Error creating temp file")
+		c.logger.WithError(err).Errorln("Error creating temp file")
 		return
 	}
 	defer os.Remove(tmp.Name())
 	err = os.Chmod(tmp.Name(), 0644)
 	if err != nil {
-		logger.WithError(err).WithField("tmpName", tmp.Name()).Errorln("Error calling chmod")
+		c.logger.WithError(err).WithField("tmpName", tmp.Name()).Errorln("Error calling chmod")
 		return
 	}
 	err = ioutil.WriteFile(tmp.Name(), str, 0644)
 	if err != nil {
-		logger.WithError(err).WithField("tmpName", tmp.Name()).Errorln("Error writing file")
+		c.logger.WithError(err).WithField("tmpName", tmp.Name()).Errorln("Error writing file")
 		return
 	}
 
-	logger.WithField("KnownHosts", c.conf.KnownHosts).Println("Installing known_hosts file")
-	c.shellOut([]string{"/bin/mv", tmp.Name(), c.conf.KnownHosts}, logger)
+	c.logger.WithField("KnownHosts", c.conf.KnownHosts).Println("Installing known_hosts file")
+	c.shellOut([]string{"/bin/mv", tmp.Name(), c.conf.KnownHosts})
 }
 
 func (c *Client) GenerateClient() error {
@@ -246,7 +248,7 @@ func buildConfig(caBundlePath string) (*tls.Config, error) {
 	}, nil
 }
 
-func (c *Client) shellOut(command []string, logger logrus.Logger) {
+func (c *Client) shellOut(command []string) {
 	if len(command) == 0 {
 		return
 	}
@@ -262,16 +264,16 @@ func (c *Client) shellOut(command []string, logger logrus.Logger) {
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 
-	logger.WithField("commands", strings.Join(command, " ")).Println("calling exec on commands")
+	c.logger.WithField("commands", strings.Join(command, " ")).Println("calling exec on commands")
 
 	err := cmd.Run()
 	if err != nil {
-		logger.WithError(err).WithField("command", command).Errorln("Failed to execute command")
+		c.logger.WithError(err).WithField("command", command).Errorln("Failed to execute command")
 		if len(stdout.Bytes()) > 0 {
-			logger.WithField("stdout", stdout.Bytes()).Println("Printing Stdout")
+			c.logger.WithField("stdout", stdout.Bytes()).Println("Printing Stdout")
 		}
 		if len(stderr.Bytes()) > 0 {
-			logger.WithField("stderr", stderr.Bytes()).Errorln("Printing Stderr")
+			c.logger.WithField("stderr", stderr.Bytes()).Errorln("Printing Stderr")
 		}
 	}
 }
