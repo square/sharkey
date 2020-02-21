@@ -19,12 +19,12 @@ func Run(args []string, logger *logrus.Logger) {
 
 	data, err := ioutil.ReadFile(*configPath)
 	if err != nil {
-		logger.WithError(err).Errorln("Error reading config file")
+		logger.WithError(err).Fatalln("Error reading config file")
 	}
 
 	var conf client.Config
 	if err := yaml.Unmarshal(data, &conf); err != nil {
-		logger.WithError(err).Errorln("Error parsing config file")
+		logger.WithError(err).Fatalln("Error parsing config file")
 	}
 
 	client.Run(&conf, logger)
