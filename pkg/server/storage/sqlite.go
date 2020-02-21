@@ -4,12 +4,10 @@ import (
 	"database/sql"
 	"fmt"
 
-	"golang.org/x/crypto/ssh"
-
 	"bitbucket.org/liamstask/goose/lib/goose"
-
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/square/sharkey/pkg/server/config"
+	"golang.org/x/crypto/ssh"
 )
 
 // SqliteStorage implements the storage interface, using Sqlite for storage.

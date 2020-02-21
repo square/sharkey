@@ -22,12 +22,6 @@ import (
 	"crypto/x509/pkix"
 	"errors"
 	"fmt"
-	"github.com/sirupsen/logrus"
-	"github.com/sirupsen/logrus/hooks/test"
-	"github.com/square/sharkey/pkg/server/config"
-	"github.com/square/sharkey/pkg/server/storage"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -37,6 +31,12 @@ import (
 	"testing"
 
 	_ "github.com/mattn/go-sqlite3"
+	"github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus/hooks/test"
+	"github.com/square/sharkey/pkg/server/config"
+	"github.com/square/sharkey/pkg/server/storage"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/ssh"
 )
 

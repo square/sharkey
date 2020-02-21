@@ -1,9 +1,9 @@
 package main
 
 import (
-	"github.com/sirupsen/logrus"
 	"os"
 
+	"github.com/sirupsen/logrus"
 	"github.com/square/sharkey/pkg/client/cli"
 )
 

@@ -1,11 +1,12 @@
 package cli
 
 import (
+	"io/ioutil"
+
 	"github.com/sirupsen/logrus"
 	"github.com/square/sharkey/pkg/client"
 	"gopkg.in/alecthomas/kingpin.v2"
 	"gopkg.in/yaml.v2"
-	"io/ioutil"
 )
 
 func Run(args []string, logger *logrus.Logger) {

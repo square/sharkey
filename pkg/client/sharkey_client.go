@@ -20,13 +20,14 @@ import (
 	"bytes"
 	"crypto/tls"
 	"crypto/x509"
-	"github.com/sirupsen/logrus"
 	"io/ioutil"
 	"net/http"
 	"os"
 	"os/exec"
 	"strings"
 	"time"
+
+	"github.com/sirupsen/logrus"
 )
 
 type tlsConfig struct {

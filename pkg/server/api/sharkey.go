@@ -18,8 +18,6 @@ package api
 
 import (
 	"encoding/json"
-	"github.com/square/sharkey/pkg/server/config"
-	"github.com/square/sharkey/pkg/server/storage"
 	"io/ioutil"
 	"net/http"
 
@@ -28,6 +26,8 @@ import (
 	"github.com/gorilla/mux"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/sirupsen/logrus"
+	"github.com/square/sharkey/pkg/server/config"
+	"github.com/square/sharkey/pkg/server/storage"
 	"golang.org/x/crypto/ssh"
 )
 

@@ -18,14 +18,15 @@ package client
 
 import (
 	"fmt"
-	"github.com/sirupsen/logrus"
-	"github.com/sirupsen/logrus/hooks/test"
-	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"testing"
+
+	"github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus/hooks/test"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestEnroll(t *testing.T) {
