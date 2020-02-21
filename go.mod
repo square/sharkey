@@ -15,7 +15,6 @@ require (
 	github.com/stretchr/testify v1.5.1
 	github.com/ziutek/mymysql v0.0.0-20160623123511-8787d5581eb6 // indirect
 	golang.org/x/crypto v0.0.0-20190411191339-88737f569e3a
-	google.golang.org/appengine v1.5.0 // indirect
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
 	gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127 // indirect
 	gopkg.in/yaml.v2 v2.2.8
