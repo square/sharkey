@@ -1,16 +1,14 @@
 package cli
 
 import (
-	"log"
-
+	"github.com/sirupsen/logrus"
 	"github.com/square/sharkey/pkg/server/api"
 	"github.com/square/sharkey/pkg/server/config"
-
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 
 // Run is the main entry point to the server.  It parses command line flags and config file.
-func Run(args []string) {
+func Run(args []string, logger *logrus.Logger) {
 	app := kingpin.New("sharkey-server", "Certificate issuer of the ssh-ca system.")
 	app.Version("0.0.1")
 
@@ -25,13 +23,13 @@ func Run(args []string) {
 
 	conf, err := config.Load(*configPath)
 	if err != nil {
-		log.Fatalf("Error loading configuration file: %v", err)
+		logger.WithError(err).Fatalf("Error loading configuration file")
 	}
 
 	switch command {
 	case startCmd.FullCommand():
-		api.Run(&conf)
+		api.Run(&conf, logger)
 	case migrateCmd.FullCommand():
-		api.Migrate(*migrationsDir, &conf)
+		api.Migrate(*migrationsDir, &conf, logger)
 	}
 }

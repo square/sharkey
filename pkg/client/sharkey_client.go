@@ -21,12 +21,13 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"os"
 	"os/exec"
 	"strings"
 	"time"
+
+	"github.com/sirupsen/logrus"
 )
 
 type tlsConfig struct {
@@ -54,11 +55,13 @@ type Config struct {
 type Client struct {
 	conf   *Config
 	client *http.Client
+	logger *logrus.Logger
 }
 
-func Run(conf *Config) {
+func Run(conf *Config, logger *logrus.Logger) {
 	c := &Client{
-		conf: conf,
+		conf:   conf,
+		logger: logger,
 	}
 
 	if len(c.conf.HostKeys) == 0 {
@@ -67,14 +70,14 @@ func Run(conf *Config) {
 			{c.conf.HostKey, c.conf.SignedCert},
 		}
 	} else if c.conf.HostKey != "" || c.conf.SignedCert != "" {
-		log.Fatalf("Options host_key/signed_cert and host_keys are mutually exclusive")
+		c.logger.Fatal("Options host_key/signed_cert and host_keys are mutually exclusive")
 	}
 
 	if err := c.GenerateClient(); err != nil {
-		log.Fatalf("Error generating http client: %s\n", err)
+		c.logger.WithError(err).Fatalln("Error generating http client")
 	}
 
-	log.Println("Fetching updated SSH certificate from server")
+	c.logger.Println("Fetching updated SSH certificate from server")
 	for _, entry := range c.conf.HostKeys {
 		c.enroll(entry.HostKey, entry.SignedCert)
 	}
@@ -84,15 +87,15 @@ func Run(conf *Config) {
 	if c.conf.Sleep != "" {
 		sleep, err := time.ParseDuration(c.conf.Sleep)
 		if err != nil {
-			log.Fatalf("Error parsing sleep duration: %s\n", err)
+			logger.WithError(err).Fatalln("Error parsing sleep duration")
 		}
 		ticker := time.NewTicker(sleep)
 		for range ticker.C {
 			if err = c.GenerateClient(); err != nil {
-				log.Fatalf("Error generating http client: %s\n", err)
+				logger.WithError(err).Fatalln("Error generating http client")
 			}
 
-			log.Println("Fetching updated SSH certificate from server")
+			logger.Println("Fetching updated SSH certificate from server")
 			for _, entry := range c.conf.HostKeys {
 				c.enroll(entry.HostKey, entry.SignedCert)
 			}
@@ -111,47 +114,50 @@ func (c *Client) enroll(hostKey string, signedCert string) {
 	url := c.conf.RequestAddr + "/enroll/" + hostname // host name of machine running on
 	hostkey, err := ioutil.ReadFile(hostKey)          // path to host key
 	if err != nil {
-		log.Printf("Error reading host key at %s: %s", hostKey, err)
+		c.logger.WithFields(logrus.Fields{
+			"hostkey": hostKey,
+			"error":   err,
+		}).Print("Error reading host key")
 		return
 	}
 	resp, err := c.client.Post(url, "text/plain", bytes.NewReader(hostkey))
 	if err != nil {
-		log.Printf("Error talking to backend: %s\n", err)
+		c.logger.WithError(err).Println("Error talking to backend")
 		return
 	}
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		log.Printf("Error reading response from server: %s\n", err)
+		c.logger.WithError(err).Errorln("Error reading response from server")
 		return
 	}
 	if resp.StatusCode != 200 {
-		log.Printf("Error retrieving signed cert from server: %s\n", string(body))
+		c.logger.WithField("body", string(body)).Errorln("Error retrieving signed cert from server")
 		return
 	}
 	tmp, err := ioutil.TempFile("", "sharkey-signed-cert")
 	if err != nil {
-		log.Printf("Error creating temp file: %s\n", err)
+		c.logger.WithError(err).Errorln("Error creating temp file")
 		return
 	}
 	defer os.Remove(tmp.Name())
 	err = os.Chmod(tmp.Name(), 0644)
 	if err != nil {
-		log.Printf("Error calling chmod on %s: %s\n", tmp.Name(), err)
+		c.logger.WithError(err).WithField("tmpName", tmp.Name()).Errorln("Error calling chmod")
 		return
 	}
 	err = ioutil.WriteFile(tmp.Name(), body, 0644)
 	if err != nil {
-		log.Printf("Error writing to %s: %s\n", tmp.Name(), err)
+		c.logger.WithError(err).WithField("tmpName", tmp.Name()).Errorln("Error writing file")
 		return
 	}
 
-	log.Printf("Installing updated SSH certificate into %s\n", signedCert)
+	c.logger.WithField("signedCert", signedCert).Println("Installing updated SSH certificate")
 	c.shellOut([]string{"/bin/mv", tmp.Name(), signedCert})
 }
 
 func (c *Client) reloadSSH() {
-	log.Println("Restarting SSH daemon to make it pick up new certificate")
+	c.logger.Println("Restarting SSH daemon to make it pick up new certificate")
 	c.shellOut(c.conf.SSHReload)
 }
 
@@ -165,37 +171,37 @@ func (c *Client) makeKnownHosts() {
 	url := c.conf.RequestAddr + knownHosts
 	resp, err := c.client.Get(url)
 	if err != nil {
-		log.Printf("Error talking to backend: %s\n", err)
+		c.logger.WithError(err).Errorln("Error talking to backend")
 		return
 	}
 	defer resp.Body.Close()
 	str, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		log.Printf("Error reading response body: %s\n", err)
+		c.logger.WithError(err).Errorln("Error reading response body")
 		return
 	}
 	if resp.StatusCode != 200 {
-		log.Printf("Error retrieving known hosts file from server (got status %d)\n", resp.StatusCode)
+		c.logger.WithField("StatusCode", resp.StatusCode).Errorln("Error retrieving known hosts file from server")
 		return
 	}
 	tmp, err := ioutil.TempFile("", "sharkey-known-hosts")
 	if err != nil {
-		log.Printf("Error creating temp file: %s\n", err)
+		c.logger.WithError(err).Errorln("Error creating temp file")
 		return
 	}
 	defer os.Remove(tmp.Name())
 	err = os.Chmod(tmp.Name(), 0644)
 	if err != nil {
-		log.Printf("Error calling chmod on %s: %s\n", tmp.Name(), err)
+		c.logger.WithError(err).WithField("tmpName", tmp.Name()).Errorln("Error calling chmod")
 		return
 	}
 	err = ioutil.WriteFile(tmp.Name(), str, 0644)
 	if err != nil {
-		log.Printf("Error writing to %s: %s\n", tmp.Name(), err)
+		c.logger.WithError(err).WithField("tmpName", tmp.Name()).Errorln("Error writing file")
 		return
 	}
 
-	log.Printf("Installing known_hosts file into %s\n", c.conf.KnownHosts)
+	c.logger.WithField("KnownHosts", c.conf.KnownHosts).Println("Installing known_hosts file")
 	c.shellOut([]string{"/bin/mv", tmp.Name(), c.conf.KnownHosts})
 }
 
@@ -259,16 +265,16 @@ func (c *Client) shellOut(command []string) {
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 
-	log.Printf("exec: '%s'\n", strings.Join(command, " "))
+	c.logger.WithField("commands", strings.Join(command, " ")).Println("calling exec on commands")
 
 	err := cmd.Run()
 	if err != nil {
-		log.Printf("Failed to execute command %s, failed with %s\n", command, err)
+		c.logger.WithError(err).WithField("command", command).Errorln("Failed to execute command")
 		if len(stdout.Bytes()) > 0 {
-			log.Printf("Stdout: %s\n", stdout.Bytes())
+			c.logger.WithField("stdout", stdout.Bytes()).Println("Printing Stdout")
 		}
 		if len(stderr.Bytes()) > 0 {
-			log.Printf("Stderr: %s\n", stderr.Bytes())
+			c.logger.WithField("stderr", stderr.Bytes()).Errorln("Printing Stderr")
 		}
 	}
 }

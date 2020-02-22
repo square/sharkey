@@ -22,7 +22,6 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -30,13 +29,18 @@ import (
 	"github.com/square/sharkey/pkg/server/config"
 
 	"github.com/gorilla/mux"
+	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/ssh"
 )
 
-func logHttpError(r *http.Request, w http.ResponseWriter, err error, code int) {
+func logHttpError(r *http.Request, w http.ResponseWriter, err error, code int, logger *logrus.Logger) {
 	// Log an error response:
 	// POST /enroll/example.com: 404 some message
-	log.Printf("%s %s: %d %s", r.Method, r.URL, code, err.Error())
+	logger.WithFields(logrus.Fields{
+		"method": r.Method,
+		"url":    r.URL,
+		"code":   code,
+	}).WithError(err).Error("logHttpError")
 
 	http.Error(w, err.Error(), code)
 }
@@ -56,7 +60,7 @@ func (c *Api) Enroll(w http.ResponseWriter, r *http.Request) {
 
 	cert, err := c.EnrollHost(hostname, r)
 	if err != nil {
-		log.Print("internal error")
+		c.logger.Error("internal error")
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -156,21 +160,21 @@ func (c *Api) sign(keyId string, principals []string, serial uint64, certType ui
 
 // This assumes there's an authenticating proxy which provides the user in a header, configurable.
 // We identify the proxy with its TLS client cert
-func proxyAuthenticated(ap *config.AuthenticatingProxy, w http.ResponseWriter, r *http.Request) (string, bool) {
+func proxyAuthenticated(ap *config.AuthenticatingProxy, w http.ResponseWriter, r *http.Request, logger *logrus.Logger) (string, bool) {
 	if ap == nil {
 		// Client certificates are not configured
-		logHttpError(r, w, errors.New("client certificates are unavailable"), http.StatusNotFound)
+		logHttpError(r, w, errors.New("client certificates are unavailable"), http.StatusNotFound, logger)
 		return "", false
 	}
 
 	if !(clientAuthenticated(r) && clientHostnameMatches(ap.Hostname, r)) {
-		logHttpError(r, w, fmt.Errorf("request didn't come from proxy"), http.StatusUnauthorized)
+		logHttpError(r, w, fmt.Errorf("request didn't come from proxy"), http.StatusUnauthorized, logger)
 		return "", false
 	}
 
 	user := r.Header.Get(ap.UsernameHeader)
 	if user == "" { // Shouldn't happen
-		logHttpError(r, w, errors.New("no username supplied"), http.StatusUnauthorized)
+		logHttpError(r, w, errors.New("no username supplied"), http.StatusUnauthorized, logger)
 		return "", false
 	}
 
@@ -179,7 +183,7 @@ func proxyAuthenticated(ap *config.AuthenticatingProxy, w http.ResponseWriter, r
 }
 
 func (c *Api) EnrollUser(w http.ResponseWriter, r *http.Request) {
-	user, ok := proxyAuthenticated(c.conf.AuthenticatingProxy, w, r)
+	user, ok := proxyAuthenticated(c.conf.AuthenticatingProxy, w, r, c.logger)
 	if !ok {
 		// proxyAuthenticated sets http status & logs message
 		return
@@ -187,32 +191,36 @@ func (c *Api) EnrollUser(w http.ResponseWriter, r *http.Request) {
 
 	pk, err := readPubkey(r)
 	if err != nil {
-		logHttpError(r, w, err, http.StatusBadRequest)
+		logHttpError(r, w, err, http.StatusBadRequest, c.logger)
 		return
 	}
 
 	id, err := c.storage.RecordIssuance(ssh.UserCert, user, pk)
 	if err != nil {
-		logHttpError(r, w, err, http.StatusInternalServerError)
+		logHttpError(r, w, err, http.StatusInternalServerError, c.logger)
 		return
 	}
 
 	certificate, err := c.sign(user, []string{user}, id, ssh.UserCert, pk)
 	if err != nil {
-		logHttpError(r, w, err, http.StatusInternalServerError)
+		logHttpError(r, w, err, http.StatusInternalServerError, c.logger)
 		return
 	}
 
 	certString, err := encodeCert(certificate)
 	if err != nil {
-		logHttpError(r, w, err, http.StatusInternalServerError)
+		logHttpError(r, w, err, http.StatusInternalServerError, c.logger)
 		return
 	}
 
 	_, _ = w.Write([]byte(certString))
 
 	encodedPublicKey := base64.StdEncoding.EncodeToString(pk.Marshal())
-	log.Printf("EnrollUser with Public Key: %s %s User: %s", pk.Type(), encodedPublicKey, user)
+	c.logger.WithFields(logrus.Fields{
+		"Type":       pk.Type(),
+		"Public Key": encodedPublicKey,
+		"user":       user,
+	}).Println("call EnrollUser")
 }
 
 func getDurationForCertType(cfg *config.Config, certType uint32) (time.Duration, error) {

@@ -19,17 +19,15 @@ package api
 import (
 	"encoding/json"
 	"io/ioutil"
-	"log"
 	"net/http"
-	"os"
-
-	"github.com/square/sharkey/pkg/server/config"
-	"github.com/square/sharkey/pkg/server/storage"
 
 	_ "bitbucket.org/liamstask/goose/lib/goose"
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	_ "github.com/mattn/go-sqlite3"
+	"github.com/sirupsen/logrus"
+	"github.com/square/sharkey/pkg/server/config"
+	"github.com/square/sharkey/pkg/server/storage"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -43,30 +41,32 @@ type Api struct {
 	signer  ssh.Signer
 	storage storage.Storage
 	conf    *config.Config
+	logger  *logrus.Logger
 }
 
-func Run(conf *config.Config) {
-	log.Print("Starting http server")
+func Run(conf *config.Config, logger *logrus.Logger) {
+	logger.Print("Starting http server")
 	privateKey, err := ioutil.ReadFile(conf.SigningKey)
 	if err != nil {
-		log.Fatalf("unable to read signing key file: %s", err)
+		logger.WithError(err).Fatal("unable to read signing key file")
 	}
 
 	signer, err := ssh.ParsePrivateKey(privateKey)
 	if err != nil {
-		log.Fatalf("unable to parse signing key data: %s", err)
+		logger.WithError(err).Fatal("unable to parse signing key data")
 	}
 
 	storage, err := storage.FromConfig(conf.Database)
 	if err != nil {
-		log.Fatalf("unable to setup database: %s", err)
+		logger.WithError(err).Fatal("unable to setup database")
 	}
 	defer storage.Close()
 
-	c := Api {
-		conf: conf,
-		signer: signer,
+	c := Api{
+		conf:    conf,
+		signer:  signer,
 		storage: storage,
+		logger:  logger,
 	}
 
 	handler := mux.NewRouter()
@@ -75,10 +75,10 @@ func Run(conf *config.Config) {
 	handler.Path("/known_hosts").Methods("GET").HandlerFunc(c.KnownHosts)
 	handler.Path("/authority").Methods("GET").HandlerFunc(c.Authority)
 	handler.Path("/_status").Methods("HEAD", "GET").HandlerFunc(c.Status)
-	loggingHandler := handlers.LoggingHandler(os.Stderr, handler)
+	loggingHandler := handlers.LoggingHandler(logger.Writer(), handler)
 	tlsConfig, err := config.BuildTLS(conf.TLS)
 	if err != nil {
-		log.Fatal(err)
+		logger.WithError(err).Fatal("issue with BuildTLS")
 	}
 	server := &http.Server{
 		Addr:      conf.ListenAddr,
@@ -86,18 +86,19 @@ func Run(conf *config.Config) {
 		Handler:   loggingHandler,
 	}
 
-	log.Fatal(server.ListenAndServeTLS(conf.TLS.Cert, conf.TLS.Key))
+	err = server.ListenAndServeTLS(conf.TLS.Cert, conf.TLS.Key)
+	logger.WithError(err).Fatal("issue with ListenAndServeTLS")
 }
 
-func Migrate(migrationsDir string, conf *config.Config) {
+func Migrate(migrationsDir string, conf *config.Config, logger *logrus.Logger) {
 	db, err := storage.FromConfig(conf.Database)
 	if err != nil {
-		log.Fatalf("unable to setup database: %s", err.Error())
+		logger.WithError(err).Fatal("unable to setup database")
 	}
 	defer db.Close()
 
 	if err := db.Migrate(migrationsDir); err != nil {
-		log.Fatalf("error migrating DB: %s", err.Error())
+		logger.WithError(err).Fatal("error migrating database")
 	}
 }
 

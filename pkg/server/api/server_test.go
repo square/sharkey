@@ -20,6 +20,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -29,12 +30,13 @@ import (
 	"strings"
 	"testing"
 
+	_ "github.com/mattn/go-sqlite3"
+	"github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus/hooks/test"
 	"github.com/square/sharkey/pkg/server/config"
 	"github.com/square/sharkey/pkg/server/storage"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	_ "github.com/mattn/go-sqlite3"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -103,6 +105,8 @@ func TestEnrollUser(t *testing.T) {
 		UsernameHeader: header,
 	}
 
+	hook := test.NewLocal(c.logger)
+
 	for i := 0; i < 5; i++ {
 		request, err := generateUserRequest(hostname)
 		request.Header.Set(header, "alice")
@@ -110,23 +114,42 @@ func TestEnrollUser(t *testing.T) {
 
 		rr := httptest.NewRecorder()
 		c.EnrollUser(rr, request)
+
+		assert.Equal(t, 1, len(hook.Entries))
+		assert.Equal(t, logrus.InfoLevel, hook.LastEntry().Level)
+		assert.Equal(t, "call EnrollUser", hook.LastEntry().Message)
+		assert.Contains(t, hook.LastEntry().Data, "Type")
+		assert.Contains(t, hook.LastEntry().Data, "Public Key")
+		assert.Contains(t, hook.LastEntry().Data, "user")
+
 		res := rr.Result()
 		body, err := ioutil.ReadAll(res.Body)
 		fmt.Println(string(body))
 		require.NoError(t, err, "unexpected error reading body")
 		require.Equal(t, 200, res.StatusCode, "failed to enroll user")
+		hook.Reset()
 	}
 }
 
 func TestEnrollUserNoProxyConfigured(t *testing.T) {
 	c, err := generateContext(t)
 	require.NoError(t, err)
+	hook := test.NewLocal(c.logger)
 
 	request, err := generateUserRequest("proxy")
 	require.NoError(t, err)
 
 	rr := httptest.NewRecorder()
 	c.EnrollUser(rr, request)
+
+	assert.Equal(t, 1, len(hook.Entries))
+	assert.Equal(t, logrus.ErrorLevel, hook.LastEntry().Level)
+	assert.Equal(t, "logHttpError", hook.LastEntry().Message)
+	assert.Equal(t, errors.New("client certificates are unavailable"), hook.LastEntry().Data["error"])
+	assert.Contains(t, hook.LastEntry().Data, "method")
+	assert.Contains(t, hook.LastEntry().Data, "url")
+	assert.Contains(t, hook.LastEntry().Data, "code")
+
 	res := rr.Result()
 	_, err = ioutil.ReadAll(res.Body)
 	require.NoError(t, err, "unexpected error reading body")
@@ -137,6 +160,7 @@ func TestEnrollNoAuthedUser(t *testing.T) {
 	hostname := "proxy"
 	c, err := generateContext(t)
 	require.NoError(t, err)
+	hook := test.NewLocal(c.logger)
 
 	// set auth proxy
 	c.conf.AuthenticatingProxy = &config.AuthenticatingProxy{
@@ -148,6 +172,13 @@ func TestEnrollNoAuthedUser(t *testing.T) {
 
 	rr := httptest.NewRecorder()
 	c.EnrollUser(rr, request)
+
+	assert.Equal(t, "logHttpError", hook.LastEntry().Message)
+	assert.Equal(t, errors.New("no username supplied"), hook.LastEntry().Data["error"])
+	assert.Contains(t, hook.LastEntry().Data, "method")
+	assert.Contains(t, hook.LastEntry().Data, "url")
+	assert.Contains(t, hook.LastEntry().Data, "code")
+
 	res := rr.Result()
 	_, err = ioutil.ReadAll(res.Body)
 	require.NoError(t, err, "unexpected error reading body")
@@ -159,6 +190,7 @@ func TestEnrollWrongProxyDomain(t *testing.T) {
 	header := "X-Forwarded-User"
 	c, err := generateContext(t)
 	require.NoError(t, err)
+	hook := test.NewLocal(c.logger)
 
 	// set auth proxy
 	c.conf.AuthenticatingProxy = &config.AuthenticatingProxy{
@@ -172,6 +204,13 @@ func TestEnrollWrongProxyDomain(t *testing.T) {
 
 	rr := httptest.NewRecorder()
 	c.EnrollUser(rr, request)
+
+	assert.Equal(t, "logHttpError", hook.LastEntry().Message)
+	assert.Equal(t, errors.New("request didn't come from proxy"), hook.LastEntry().Data["error"])
+	assert.Contains(t, hook.LastEntry().Data, "method")
+	assert.Contains(t, hook.LastEntry().Data, "url")
+	assert.Contains(t, hook.LastEntry().Data, "code")
+
 	res := rr.Result()
 	_, err = ioutil.ReadAll(res.Body)
 	require.NoError(t, err, "unexpected error reading body")
@@ -261,6 +300,8 @@ func generateContext(t *testing.T) (*Api, error) {
 	signer, err := ssh.ParsePrivateKey(key)
 	require.NoError(t, err)
 
+	logger := logrus.New()
+
 	// in-memory sqlite: see https://github.com/mattn/go-sqlite3 for address docs
 	sqlite, err := storage.NewSqlite(config.Database{Address: ":memory:"})
 	require.NoError(t, err)
@@ -271,6 +312,7 @@ func generateContext(t *testing.T) (*Api, error) {
 		signer:  signer,
 		storage: sqlite,
 		conf:    conf,
+		logger:  logger,
 	}
 
 	return c, nil

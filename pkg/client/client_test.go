@@ -23,6 +23,10 @@ import (
 	"net/http/httptest"
 	"os"
 	"testing"
+
+	"github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus/hooks/test"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestEnroll(t *testing.T) {
@@ -33,9 +37,17 @@ func TestEnroll(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error generating Client: %s", err.Error())
 	}
+	hook := test.NewLocal(c.logger)
 	defer cleanup(c)
 	defer ts.Close()
 	c.enroll(c.conf.HostKeys[0].HostKey, c.conf.HostKeys[0].SignedCert)
+	assert.Equal(t, 2, len(hook.Entries))
+	assert.Equal(t, logrus.InfoLevel, hook.Entries[0].Level)
+	assert.Equal(t, logrus.InfoLevel, hook.Entries[1].Level)
+	assert.Equal(t, "Installing updated SSH certificate", hook.Entries[0].Message)
+	assert.Equal(t, "calling exec on commands", hook.Entries[1].Message)
+	assert.Contains(t, hook.Entries[0].Data, "signedCert")
+	assert.Contains(t, hook.Entries[1].Data, "commands")
 	data, err := ioutil.ReadFile(c.conf.HostKeys[0].SignedCert)
 	if err != nil {
 		t.Fatalf("error reading signed cert: %s", err.Error())
@@ -53,6 +65,7 @@ func TestKnownHosts(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error generating Client: %s", err.Error())
 	}
+	hook := test.NewLocal(c.logger)
 	defer cleanup(c)
 	defer ts.Close()
 	c.makeKnownHosts()
@@ -63,6 +76,13 @@ func TestKnownHosts(t *testing.T) {
 	if string(data) != "Test response\n" {
 		t.Fatalf("signed cert contains wrong info: %s", string(data))
 	}
+	assert.Equal(t, 2, len(hook.Entries))
+	assert.Equal(t, logrus.InfoLevel, hook.Entries[0].Level)
+	assert.Equal(t, logrus.InfoLevel, hook.Entries[1].Level)
+	assert.Equal(t, "Installing known_hosts file", hook.Entries[0].Message)
+	assert.Equal(t, "calling exec on commands", hook.Entries[1].Message)
+	assert.Contains(t, hook.Entries[0].Data, "KnownHosts")
+	assert.Contains(t, hook.Entries[1].Data, "commands")
 }
 
 func generateClient(url string) (*Client, error) {
@@ -83,9 +103,13 @@ func generateClient(url string) (*Client, error) {
 		},
 		KnownHosts: knownHostsTmp.Name(),
 	}
+
+	logger, _ := test.NewNullLogger()
+
 	return &Client{
 		conf:   &conf,
 		client: &http.Client{},
+		logger: logger,
 	}, nil
 }
 

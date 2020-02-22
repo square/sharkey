@@ -2,6 +2,7 @@
 
 set -e
 set -o pipefail
+set -x
 
 TMPDIR=$(mktemp -d)
 
@@ -23,6 +24,8 @@ function wait_for_container() {
 
 function cleanup() {
   echo "Cleanup..."
+  docker logs server
+  docker logs client
   docker stop server
   docker stop client
   docker rm server
@@ -76,7 +79,7 @@ echo "Signing user ssh key"
 curl --cert $PWD/test/tls/proxy.crt --key $PWD/test/tls/proxy.key \
   https://localhost:12321/enroll_user -H "X-Forwarded-User: alice" \
   -d @$PWD/test/ssh/alice_rsa.pub -k \
-  -o $TMPDIR/alice_rsa-cert.pub -s
+  -o $TMPDIR/alice_rsa-cert.pub -sS
 
 ssh-keygen -L -f $TMPDIR/alice_rsa-cert.pub
 
