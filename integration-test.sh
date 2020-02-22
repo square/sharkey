@@ -77,7 +77,7 @@ echo "Signing user ssh key"
 curl --cert $PWD/test/tls/proxy.crt --key $PWD/test/tls/proxy.key \
   https://localhost:12321/enroll_user -H "X-Forwarded-User: alice" \
   -d @$PWD/test/ssh/alice_rsa.pub -k \
-  -o $TMPDIR/alice_rsa-cert.pub -s
+  -o $TMPDIR/alice_rsa-cert.pub -sS
 
 ssh-keygen -L -f $TMPDIR/alice_rsa-cert.pub
 
