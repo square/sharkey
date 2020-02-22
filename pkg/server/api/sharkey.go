@@ -66,6 +66,7 @@ func Run(conf *config.Config, logger *logrus.Logger) {
 		conf:    conf,
 		signer:  signer,
 		storage: storage,
+		logger:  logger,
 	}
 
 	handler := mux.NewRouter()
