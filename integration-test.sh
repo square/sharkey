@@ -2,6 +2,7 @@
 
 set -e
 set -o pipefail
+set -x
 
 TMPDIR=$(mktemp -d)
 
