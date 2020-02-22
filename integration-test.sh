@@ -24,6 +24,8 @@ function wait_for_container() {
 
 function cleanup() {
   echo "Cleanup..."
+  docker logs server
+  docker logs client
   docker stop server
   docker stop client
   docker rm server
