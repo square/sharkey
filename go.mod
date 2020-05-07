@@ -11,7 +11,7 @@ require (
 	github.com/kylelemons/go-gypsy v0.0.0-20160905020020-08cad365cd28 // indirect
 	github.com/lib/pq v1.1.0 // indirect
 	github.com/mattn/go-sqlite3 v1.13.0
-	github.com/sirupsen/logrus v1.5.0
+	github.com/sirupsen/logrus v1.6.0
 	github.com/stretchr/testify v1.5.1
 	github.com/ziutek/mymysql v0.0.0-20160623123511-8787d5581eb6 // indirect
 	golang.org/x/crypto v0.0.0-20190411191339-88737f569e3a
