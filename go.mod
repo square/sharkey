@@ -10,7 +10,7 @@ require (
 	github.com/kr/pretty v0.1.0 // indirect
 	github.com/kylelemons/go-gypsy v0.0.0-20160905020020-08cad365cd28 // indirect
 	github.com/lib/pq v1.1.0 // indirect
-	github.com/mattn/go-sqlite3 v1.13.0
+	github.com/mattn/go-sqlite3 v1.14.0
 	github.com/sirupsen/logrus v1.6.0
 	github.com/stretchr/testify v1.6.0
 	github.com/ziutek/mymysql v0.0.0-20160623123511-8787d5581eb6 // indirect
