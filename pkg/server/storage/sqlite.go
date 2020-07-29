@@ -50,6 +50,28 @@ func (s *SqliteStorage) QueryHostkeys() (ResultIterator, error) {
 	return &SqlResultIterator{Rows: rows}, nil
 }
 
+func (s *SqliteStorage) RecordGithubMapping(mapping map[string]string) error {
+	for ssoIdentity, githubUser := range mapping {
+		_, err := s.DB.Exec("INSERT OR REPLACE INTO github (ssoIdentity, githubUser) VALUES (?, ?)",
+			ssoIdentity, githubUser)
+		if err != nil {
+			return fmt.Errorf("error recording mapping: %s", err.Error())
+		}
+	}
+
+	return nil
+}
+
+func (s *SqliteStorage) QueryGithubMapping(ssoIdentity string) (string, error) {
+	row := s.DB.QueryRow("SELECT ssoIdentity, githubUser FROM github WHERE ssoIdentity = ?", ssoIdentity)
+	var githubUser string
+	if err := row.Scan(&ssoIdentity, &githubUser); err != nil {
+		return "", err
+	}
+
+	return githubUser, nil
+}
+
 func (s *SqliteStorage) Migrate(migrationsDir string) error {
 	gooseConf := goose.DBConf{
 		MigrationsDir: migrationsDir,

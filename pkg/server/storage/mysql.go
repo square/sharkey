@@ -46,13 +46,35 @@ func (my *MysqlStorage) RecordIssuance(certType uint32, principal string, pubkey
 }
 
 func (my *MysqlStorage) QueryHostkeys() (ResultIterator, error) {
-
 	rows, err := my.DB.Query("SELECT hostname, pubkey FROM hostkeys WHERE cert_type = ?",
 		mysqlHostCert)
 	if err != nil {
 		return &SqlResultIterator{}, err
 	}
 	return &SqlResultIterator{Rows: rows}, nil
+}
+
+func (my *MysqlStorage) RecordGithubMapping(mapping map[string]string) error {
+	for ssoIdentity, githubUser := range mapping {
+		_, err := my.DB.Exec(
+			"INSERT INTO github (ssoIdentity, githubUser) VALUES (?, ?) ON DUPLICATE KEY UPDATE githubUser = ?",
+			ssoIdentity, githubUser, githubUser)
+		if err != nil {
+			return fmt.Errorf("error recording mapping: %s", err.Error())
+		}
+	}
+
+	return nil
+}
+
+func (my *MysqlStorage) QueryGithubMapping(ssoIdentity string) (string, error) {
+	row := my.DB.QueryRow("SELECT ssoIdentity, githubUser FROM github WHERE ssoIdentity = ?", ssoIdentity)
+	var githubUser string
+	if err := row.Scan(&ssoIdentity, &githubUser); err != nil {
+		return "", err
+	}
+
+	return githubUser, nil
 }
 
 // Migrate runs any pending migrations

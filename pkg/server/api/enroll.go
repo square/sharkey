@@ -151,6 +151,14 @@ func (c *Api) sign(keyId string, principals []string, serial uint64, certType ui
 		Permissions:     getPermissionsForCertType(&c.conf.SSH, certType),
 	}
 
+	if c.conf.Github.Enabled {
+		gitUser, err := c.RetrieveGitUsername(keyId)
+		if err != nil {
+			c.logger.Error(err)
+		}
+		template.Extensions["login@github.com"] = gitUser
+	}
+
 	err = template.SignCert(rand.Reader, c.signer)
 	if err != nil {
 		return nil, err

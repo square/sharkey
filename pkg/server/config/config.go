@@ -33,6 +33,7 @@ type Config struct {
 	ExtraKnownHosts     []string             `yaml:"extra_known_hosts"`
 	AuthenticatingProxy *AuthenticatingProxy `yaml:"auth_proxy"`
 	SSH                 SSH                  `yaml:"ssh"`
+	Github              Github               `yaml:"github"`
 }
 
 type SSH struct {
@@ -57,6 +58,13 @@ type Database struct {
 type AuthenticatingProxy struct {
 	Hostname       string `yaml:"hostname"`
 	UsernameHeader string `yaml:"username_header"`
+}
+
+type Github struct {
+	Enabled        bool   `yaml:"enabled"`
+	AppId          int64  `yaml:"appId"`
+	InstallationId int64  `yaml:"installationId"`
+	PrivateKey     string `yaml:"privateKey"`
 }
 
 // buildConfig reads command-line options and builds a tls.Config
