@@ -25,7 +25,8 @@ ssh:
     - "permit-user-rc"
 github:
   enabled: true
-  appId: 75199
-  installationId: 10972895
-  # fill with github app private key file location
+  # fill with github app info
+  appId: 1
+  installationId: 1
+  # github app private key file location
   privateKey: ""

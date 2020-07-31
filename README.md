@@ -242,3 +242,71 @@ Testing looks something like this:
 
 But in production use you'd expect it more like
    `curl <auth to your proxy> https://ssoproxy.example.com/enroll_user -d @~/.ssh/bob.pub`
+
+### Github Support
+
+Sharkey supports issuing certificates for SSH access to Github by mapping SAML identities to Github usernames through 
+the following GraphQL query:
+```
+query {
+  organization(login: "squareup") {
+    samlIdentityProvider {
+      ssoUrl
+      externalIdentities(first: 100, after: null) {
+        edges {
+          node {
+            guid
+            samlIdentity {
+              nameId
+            }
+            user {
+              login
+            }
+          }
+        }
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
+      }
+    }
+  }
+}
+```
+
+In order to enable support for Github, add the following stanza to Sharkey's server config:
+```
+github:
+  enabled: true
+  # fill with github app info
+  appId: 1
+  installationId: 1
+  # github app private key file location
+  privateKey: ""
+```
+An example can be found in `test/git_server_config.yaml`. A Github App with read/write access to `Organization:members` 
+is required. 
+
+Sharkey uses a cronjob that runs every 5 minutes to query Github for a mapping of SAML identities to Github usernames.
+This mapping is stored in a DB table, `github`. When issuing a certificate, Sharkey fetches from the stored mapping to
+retrieve the corresponding Github username and attaches it to the certificate as an extension.
+
+An example cert is shown below:
+```
+        Type: ssh-rsa-cert-v01@openssh.com user certificate
+        Public key: RSA-CERT SHA256:Eabuov2aAPLhN1FscJ6P3Lle85N6Txhj4sy4ALTkG6M
+        Signing CA: ED25519 SHA256:HYgRf1dHbVtWY/e3jjfnAlwvAPPBKYxdXz8SDfhlAws (using ssh-ed25519)
+        Key ID: "alice"
+        Serial: 1
+        Valid: from 2020-07-31T16:10:25 to 2020-08-01T16:10:25
+        Principals:
+                alice
+        Critical Options: (none)
+        Extensions:
+                login@github.com UNKNOWN OPTION (len 5)
+                permit-X11-forwarding
+                permit-agent-forwarding
+                permit-port-forwarding
+                permit-pty
+                permit-user-rc
+```
