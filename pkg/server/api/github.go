@@ -10,7 +10,10 @@ import (
 	"net/http"
 )
 
-const pageLength = 100
+const (
+	pageLength = 100
+	cronRate   = "5m"
+)
 
 func (c *Api) getClient() *githubv4.Client {
 	tr := http.DefaultTransport
@@ -111,7 +114,7 @@ func (c *Api) StartGitCron() error {
 	// The cron doesn't initially run, so we run it first before kick off the cron
 	c.storeCache()
 	job := cron.New()
-	if _, err := job.AddFunc("@every 5m", c.storeCache); err != nil {
+	if _, err := job.AddFunc(fmt.Sprintf("@every %s", cronRate), c.storeCache); err != nil {
 		return err
 	}
 	job.Start()
