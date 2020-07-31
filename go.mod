@@ -5,7 +5,7 @@ require (
 	github.com/PuerkitoBio/goquery v1.5.1 // indirect
 	github.com/alecthomas/template v0.0.0-20160405071501-a0175ee3bccc // indirect
 	github.com/alecthomas/units v0.0.0-20151022065526-2efee857e7cf // indirect
-	github.com/bradleyfalzon/ghinstallation v1.1.1 // indirect
+	github.com/bradleyfalzon/ghinstallation v1.1.1
 	github.com/go-sql-driver/mysql v1.5.0
 	github.com/google/go-github/v29 v29.0.3 // indirect
 	github.com/gorilla/handlers v1.4.2
