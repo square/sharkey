@@ -152,7 +152,7 @@ func (c *Api) sign(keyId string, principals []string, serial uint64, certType ui
 	}
 
 	if c.conf.Github.Enabled {
-		gitUser, err := c.RetrieveGitUsername(keyId)
+		gitUser, err := c.RetrieveGithubUsername(keyId)
 		if err != nil {
 			c.logger.Error(err)
 		}

@@ -19,7 +19,7 @@ func (c *Api) getClient() *githubv4.Client {
 	tr := http.DefaultTransport
 
 	itr, err := ghinstallation.NewKeyFromFile(
-		tr, c.conf.Github.AppId, c.conf.Github.InstallationId, c.conf.Github.PrivateKey)
+		tr, c.conf.Github.AppId, c.conf.Github.InstallationId, c.conf.Github.PrivateKeyPath)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -66,7 +66,6 @@ func (c *Api) queryGit() (map[string]string, error) {
 			return nil, err
 		}
 
-		//fmt.Println(query.Organization.SamlIdentityProvider.SsoUrl)
 		for _, edge := range query.Organization.SamlIdentityProvider.ExternalIdentities.Edges {
 			gitLogin := string(edge.Node.User.Login)
 			ssoLogin := string(edge.Node.SamlIdentity.NameId)
@@ -100,7 +99,7 @@ func (c *Api) storeCache() {
 	}
 }
 
-func (c *Api) RetrieveGitUsername(ssoIdentity string) (string, error) {
+func (c *Api) RetrieveGithubUsername(ssoIdentity string) (string, error) {
 	user, err := c.queryCache(ssoIdentity)
 
 	if err != nil {

@@ -29,4 +29,4 @@ github:
   appId: 1
   installationId: 1
   # github app private key file location
-  privateKey: ""
+  privateKeyPath: ""

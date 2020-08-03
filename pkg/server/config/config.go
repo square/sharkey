@@ -64,7 +64,7 @@ type Github struct {
 	Enabled        bool   `yaml:"enabled"`
 	AppId          int64  `yaml:"appId"`
 	InstallationId int64  `yaml:"installationId"`
-	PrivateKey     string `yaml:"privateKey"`
+	PrivateKeyPath string `yaml:"privateKeyPath"`
 }
 
 // buildConfig reads command-line options and builds a tls.Config

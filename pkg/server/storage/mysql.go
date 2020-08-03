@@ -68,9 +68,9 @@ func (my *MysqlStorage) RecordGithubMapping(mapping map[string]string) error {
 }
 
 func (my *MysqlStorage) QueryGithubMapping(ssoIdentity string) (string, error) {
-	row := my.DB.QueryRow("SELECT ssoIdentity, githubUser FROM github WHERE ssoIdentity = ?", ssoIdentity)
+	row := my.DB.QueryRow("SELECT githubUser FROM github WHERE ssoIdentity = ?", ssoIdentity)
 	var githubUser string
-	if err := row.Scan(&ssoIdentity, &githubUser); err != nil {
+	if err := row.Scan(&githubUser); err != nil {
 		return "", err
 	}
 
