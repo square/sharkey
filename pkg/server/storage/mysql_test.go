@@ -11,7 +11,7 @@ import (
 func purge(t *testing.T, db *sql.DB) {
 	_, err := db.Exec("DROP TABLE IF EXISTS hostkeys")
 	require.NoError(t, err)
-	_, err = db.Exec("DROP TABLE IF EXISTS github")
+	_, err = db.Exec("DROP TABLE IF EXISTS github_user_mappings")
 	require.NoError(t, err)
 	_, err = db.Exec("DROP TABLE IF EXISTS goose_db_version")
 	require.NoError(t, err)

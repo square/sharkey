@@ -61,10 +61,12 @@ type AuthenticatingProxy struct {
 }
 
 type Github struct {
-	Enabled        bool   `yaml:"enabled"`
-	AppId          int64  `yaml:"appId"`
-	InstallationId int64  `yaml:"installationId"`
-	PrivateKeyPath string `yaml:"privateKeyPath"`
+	Enabled          bool   `yaml:"enabled"`
+	AppId            int64  `yaml:"app_id"`
+	InstallationId   int64  `yaml:"installation_id"`
+	PrivateKeyPath   string `yaml:"private_key_path"`
+	OrganizationName string `yaml:"organization_name"`
+	SyncInterval     string `yaml:"sync_interval"`
 }
 
 // buildConfig reads command-line options and builds a tls.Config

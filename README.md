@@ -243,49 +243,18 @@ Testing looks something like this:
 But in production use you'd expect it more like
    `curl <auth to your proxy> https://ssoproxy.example.com/enroll_user -d @~/.ssh/bob.pub`
 
-### Github Support
+### GitHub SSH CA Support
 
-Sharkey supports issuing certificates for SSH access to Github by mapping SAML identities to Github usernames through 
-the following GraphQL query:
-```
-query {
-  organization(login: "squareup") {
-    samlIdentityProvider {
-      ssoUrl
-      externalIdentities(first: 100, after: null) {
-        edges {
-          node {
-            guid
-            samlIdentity {
-              nameId
-            }
-            user {
-              login
-            }
-          }
-        }
-        pageInfo {
-          hasNextPage
-          endCursor
-        }
-      }
-    }
-  }
-}
-```
+Sharkey supports issuing user certificates that are compatible with GitHub SSH CA format by:
 
-In order to enable support for Github, add the following stanza to Sharkey's server config:
-```
-github:
-  enabled: true
-  # fill with github app info
-  appId: 1
-  installationId: 1
-  # github app private key file location
-  privateKey: ""
-```
-An example can be found in `test/git_server_config.yaml`. A Github App with read/write access to `Organization:members` 
-is required. 
+mapping a GitHub username to a SAML identity, and
+including appropriate GitHub username in each certificate
+GitHub supports authentication using SSH certificates for Enterprise Cloud accounts. The only requirement is that certificates include GitHub usernames, so that they can be matched to a particular user.
+
+Sharkey already requires SSO proxy for the user certificate feature. Additionally, the GitHub integration requires that the GitHub organization is configured with SSO (i.e. non-GitHub) access.
+
+An example config with GitHub SSH CA Support enabled can be found in `test/git_server_config.yaml`.
+A GitHub App with read/write access to `Organization:members` is required. 
 
 Sharkey uses a cronjob that runs every 5 minutes to query Github for a mapping of SAML identities to Github usernames.
 This mapping is stored in a DB table, `github`. When issuing a certificate, Sharkey fetches from the stored mapping to

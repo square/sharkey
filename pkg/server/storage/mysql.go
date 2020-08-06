@@ -3,6 +3,7 @@ package storage
 import (
 	"database/sql"
 	"fmt"
+	"strings"
 
 	"golang.org/x/crypto/ssh"
 
@@ -55,20 +56,31 @@ func (my *MysqlStorage) QueryHostkeys() (ResultIterator, error) {
 }
 
 func (my *MysqlStorage) RecordGithubMapping(mapping map[string]string) error {
+	// Prepare for batch insert
+	entries := make([]string, 0, len(mapping))
+	values := make([]interface{}, 0, len(mapping)*2)
 	for ssoIdentity, githubUser := range mapping {
-		_, err := my.DB.Exec(
-			"INSERT INTO github (ssoIdentity, githubUser) VALUES (?, ?) ON DUPLICATE KEY UPDATE githubUser = ?",
-			ssoIdentity, githubUser, githubUser)
-		if err != nil {
-			return fmt.Errorf("error recording mapping: %s", err.Error())
-		}
+		// Create one set of values for each mapping
+		entries = append(entries, "(?, ?)")
+		// Append matching values for mapping
+		values = append(values, ssoIdentity)
+		values = append(values, githubUser)
+	}
+	// Create prepared statement with necessary number of (?, ?) values
+	stmt := fmt.Sprintf(
+		"INSERT INTO github_user_mappings (sso_identity, github_username) VALUES %s ON DUPLICATE KEY UPDATE github_username=VALUES(github_username)",
+		strings.Join(entries, ","))
+	// Execute with blown up values that match into the (?, ?) blocks inserted into the statement
+	_, err := my.DB.Exec(stmt, values...)
+	if err != nil {
+		return fmt.Errorf("error recording mapping: %s", err.Error())
 	}
 
 	return nil
 }
 
 func (my *MysqlStorage) QueryGithubMapping(ssoIdentity string) (string, error) {
-	row := my.DB.QueryRow("SELECT githubUser FROM github WHERE ssoIdentity = ?", ssoIdentity)
+	row := my.DB.QueryRow("SELECT github_username FROM github_user_mappings WHERE sso_identity = ?", ssoIdentity)
 	var githubUser string
 	if err := row.Scan(&githubUser); err != nil {
 		return "", err

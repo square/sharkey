@@ -26,7 +26,9 @@ ssh:
 github:
   enabled: true
   # fill with github app info
-  appId: 1
-  installationId: 1
+  app_id: 1
+  installation_id: 1
   # github app private key file location
-  privateKeyPath: ""
+  private_key_path: ""
+  organization_name: ""
+  sync_interval: "5m"
