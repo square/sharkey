@@ -256,9 +256,9 @@ Sharkey already requires SSO proxy for the user certificate feature. Additionall
 An example config with GitHub SSH CA Support enabled can be found in `test/git_server_config.yaml`.
 A GitHub App with read/write access to `Organization:members` is required. 
 
-Sharkey uses a cronjob that runs every 5 minutes to query Github for a mapping of SAML identities to Github usernames.
+Sharkey uses a cronjob that runs every 5 minutes to query GitHub for a mapping of SAML identities to GitHub usernames.
 This mapping is stored in a DB table, `github`. When issuing a certificate, Sharkey fetches from the stored mapping to
-retrieve the corresponding Github username and attaches it to the certificate as an extension.
+retrieve the corresponding GitHub username and attaches it to the certificate as an extension.
 
 An example cert is shown below:
 ```

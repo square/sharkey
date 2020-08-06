@@ -51,7 +51,7 @@ func (s *SqliteStorage) QueryHostkeys() (ResultIterator, error) {
 	return &SqlResultIterator{Rows: rows}, nil
 }
 
-func (s *SqliteStorage) RecordGithubMapping(mapping map[string]string) error {
+func (s *SqliteStorage) RecordGitHubMapping(mapping map[string]string) error {
 	// Prepare for batch insert
 	entries := make([]string, 0, len(mapping))
 	values := make([]interface{}, 0, len(mapping)*2)
@@ -75,7 +75,7 @@ func (s *SqliteStorage) RecordGithubMapping(mapping map[string]string) error {
 	return nil
 }
 
-func (s *SqliteStorage) QueryGithubMapping(ssoIdentity string) (string, error) {
+func (s *SqliteStorage) QueryGitHubMapping(ssoIdentity string) (string, error) {
 	row := s.DB.QueryRow("SELECT github_username FROM github_user_mappings WHERE sso_identity = ?", ssoIdentity)
 	var githubUser string
 	if err := row.Scan(&githubUser); err != nil {

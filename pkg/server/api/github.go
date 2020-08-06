@@ -23,7 +23,7 @@ func (c *Api) getClient() *githubv4.Client {
 	// https://developer.github.com/apps/building-github-apps/authenticating-with-github-apps/
 	// Ghinstallation creates a transport which we give to the githubv4 client for auth
 	itr, err := ghinstallation.NewKeyFromFile(
-		tr, c.conf.Github.AppId, c.conf.Github.InstallationId, c.conf.Github.PrivateKeyPath)
+		tr, c.conf.GitHub.AppId, c.conf.GitHub.InstallationId, c.conf.GitHub.PrivateKeyPath)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -34,6 +34,27 @@ func (c *Api) getClient() *githubv4.Client {
 func (c *Api) fetchUserMappings() (map[string]string, error) {
 	client := c.getClient()
 
+	// Original GraphQL query to retrieve mapping of SAML Identity to GitHub Username
+	// query {
+	//   organization(login: organization) {
+	// 	   samlIdentityProvider {
+	//	     ssoUrl
+	//	     externalIdentities(first: 100) {
+	//	       edges {
+	//		     node {
+	//		       guid
+	//		       samlIdentity {
+	//			     nameId
+	//		       }
+	//		       user {
+	//			     login
+	//		       }
+	//		     }
+	//	       }
+	//	     }
+	//     }
+	//   }
+	// }
 	var query struct {
 		Organization struct {
 			SamlIdentityProvider struct {
@@ -58,8 +79,11 @@ func (c *Api) fetchUserMappings() (map[string]string, error) {
 			}
 		} `graphql:"organization(login:$organization)"`
 	}
+	// Variables for the above query
+	// Replaces the variables in the graphql extensions above
+	// $pageLength corresponds to pageLength below
 	variables := map[string]interface{}{
-		"organization": githubv4.String(c.conf.Github.OrganizationName),
+		"organization": githubv4.String(c.conf.GitHub.OrganizationName),
 		"cursor":       (*githubv4.String)(nil),
 		"pageLength":   githubv4.Int(pageLength),
 	}
@@ -84,7 +108,6 @@ func (c *Api) fetchUserMappings() (map[string]string, error) {
 		}
 		variables["cursor"] = pageInfo.EndCursor
 	}
-	mapping["alice"] = "a"
 
 	return mapping, nil
 }
@@ -95,13 +118,13 @@ func (c *Api) updateUserMappings() {
 		c.logger.Errorf("unable to retrieve github mapping: %s", err)
 	}
 
-	if err := c.storage.RecordGithubMapping(mapping); err != nil {
+	if err := c.storage.RecordGitHubMapping(mapping); err != nil {
 		c.logger.Errorf("unable to record github mapping: %s", err)
 	}
 }
 
-func (c *Api) RetrieveGithubUsername(ssoIdentity string) (string, error) {
-	user, err := c.storage.QueryGithubMapping(ssoIdentity)
+func (c *Api) RetrieveGitHubUsername(ssoIdentity string) (string, error) {
+	user, err := c.storage.QueryGitHubMapping(ssoIdentity)
 
 	if err != nil {
 		return "", fmt.Errorf("unable to find user %s in github mapping: %s", ssoIdentity, err)
@@ -114,7 +137,7 @@ func (c *Api) StartGitCron() error {
 	// The cron doesn't initially run, so we run it first before kick off the cron
 	c.updateUserMappings()
 	job := cron.New()
-	if _, err := job.AddFunc(fmt.Sprintf("@every %s", c.conf.Github.SyncInterval), c.updateUserMappings); err != nil {
+	if _, err := job.AddFunc(fmt.Sprintf("@every %s", c.conf.GitHub.SyncInterval), c.updateUserMappings); err != nil {
 		return err
 	}
 	job.Start()

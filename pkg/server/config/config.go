@@ -33,7 +33,7 @@ type Config struct {
 	ExtraKnownHosts     []string             `yaml:"extra_known_hosts"`
 	AuthenticatingProxy *AuthenticatingProxy `yaml:"auth_proxy"`
 	SSH                 SSH                  `yaml:"ssh"`
-	Github              Github               `yaml:"github"`
+	GitHub              GitHub               `yaml:"github"`
 }
 
 type SSH struct {
@@ -60,7 +60,7 @@ type AuthenticatingProxy struct {
 	UsernameHeader string `yaml:"username_header"`
 }
 
-type Github struct {
+type GitHub struct {
 	Enabled          bool   `yaml:"enabled"`
 	AppId            int64  `yaml:"app_id"`
 	InstallationId   int64  `yaml:"installation_id"`

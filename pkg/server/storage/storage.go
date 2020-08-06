@@ -25,9 +25,9 @@ type Storage interface {
 	Migrate(string) error
 
 	// Record mapping of user identities to github username
-	RecordGithubMapping(mapping map[string]string) error
+	RecordGitHubMapping(mapping map[string]string) error
 
-	QueryGithubMapping(ssoIdentity string) (string, error)
+	QueryGitHubMapping(ssoIdentity string) (string, error)
 
 	Ping() error
 	Close() error

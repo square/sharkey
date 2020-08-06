@@ -55,7 +55,7 @@ func (my *MysqlStorage) QueryHostkeys() (ResultIterator, error) {
 	return &SqlResultIterator{Rows: rows}, nil
 }
 
-func (my *MysqlStorage) RecordGithubMapping(mapping map[string]string) error {
+func (my *MysqlStorage) RecordGitHubMapping(mapping map[string]string) error {
 	// Prepare for batch insert
 	entries := make([]string, 0, len(mapping))
 	values := make([]interface{}, 0, len(mapping)*2)
@@ -79,7 +79,7 @@ func (my *MysqlStorage) RecordGithubMapping(mapping map[string]string) error {
 	return nil
 }
 
-func (my *MysqlStorage) QueryGithubMapping(ssoIdentity string) (string, error) {
+func (my *MysqlStorage) QueryGitHubMapping(ssoIdentity string) (string, error) {
 	row := my.DB.QueryRow("SELECT github_username FROM github_user_mappings WHERE sso_identity = ?", ssoIdentity)
 	var githubUser string
 	if err := row.Scan(&githubUser); err != nil {
