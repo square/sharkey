@@ -156,6 +156,9 @@ func (c *Api) sign(keyId string, principals []string, serial uint64, certType ui
 		if err != nil {
 			c.logger.Error(err)
 		}
+		if template.Extensions == nil {
+			template.Extensions = map[string]string{}
+		}
 		template.Extensions["login@github.com"] = gitUser
 	}
 
