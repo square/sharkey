@@ -67,8 +67,10 @@ func (my *MysqlStorage) RecordGitHubMapping(mapping map[string]string) error {
 		values = append(values, githubUser)
 	}
 	// Create query with necessary number of (?, ?) values
+	// Note: The use of VALUES in VALUES(github_username) will be deprecated in MYSQL 8.0.20
+	// https://dev.mysql.com/doc/refman/8.0/en/insert-on-duplicate.html
 	stmt := fmt.Sprintf(
-		"INSERT INTO github_user_mappings (sso_identity, github_username) VALUES %s AS new ON DUPLICATE KEY UPDATE github_username=VALUES(new.github_username)",
+		"INSERT INTO github_user_mappings (sso_identity, github_username) VALUES %s ON DUPLICATE KEY UPDATE github_username=VALUES(github_username)",
 		strings.Join(entries, ","))
 	// Execute with blown up values that match into the (?, ?) blocks inserted into the statement
 	_, err := my.DB.Exec(stmt, values...)
