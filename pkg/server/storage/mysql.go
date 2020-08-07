@@ -66,9 +66,9 @@ func (my *MysqlStorage) RecordGitHubMapping(mapping map[string]string) error {
 		values = append(values, ssoIdentity)
 		values = append(values, githubUser)
 	}
-	// Create prepared statement with necessary number of (?, ?) values
+	// Create query with necessary number of (?, ?) values
 	stmt := fmt.Sprintf(
-		"INSERT INTO github_user_mappings (sso_identity, github_username) VALUES %s ON DUPLICATE KEY UPDATE github_username=VALUES(github_username)",
+		"INSERT INTO github_user_mappings (sso_identity, github_username) VALUES %s AS new ON DUPLICATE KEY UPDATE github_username=VALUES(new.github_username)",
 		strings.Join(entries, ","))
 	// Execute with blown up values that match into the (?, ?) blocks inserted into the statement
 	_, err := my.DB.Exec(stmt, values...)

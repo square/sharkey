@@ -247,8 +247,9 @@ But in production use you'd expect it more like
 
 Sharkey supports issuing user certificates that are compatible with GitHub SSH CA format by:
 
-mapping a GitHub username to a SAML identity, and
-including appropriate GitHub username in each certificate
+- Mapping a GitHub username to a SAML identity
+- Including appropriate GitHub username in each certificate
+
 GitHub supports authentication using SSH certificates for Enterprise Cloud accounts. The only requirement is that certificates include GitHub usernames, so that they can be matched to a particular user.
 
 Sharkey already requires SSO proxy for the user certificate feature. Additionally, the GitHub integration requires that the GitHub organization is configured with SSO (i.e. non-GitHub) access.
@@ -256,9 +257,8 @@ Sharkey already requires SSO proxy for the user certificate feature. Additionall
 An example config with GitHub SSH CA Support enabled can be found in `test/git_server_config.yaml`.
 A GitHub App with read/write access to `Organization:members` is required. 
 
-Sharkey uses a cronjob that runs every 5 minutes to query GitHub for a mapping of SAML identities to GitHub usernames.
-This mapping is stored in a DB table, `github`. When issuing a certificate, Sharkey fetches from the stored mapping to
-retrieve the corresponding GitHub username and attaches it to the certificate as an extension.
+Sharkey will periodically query GitHub for a mapping of SAML identities to GitHub usernames and store it in Sharkey's DB. 
+When issuing a certificate, Sharkey will check the DB and if a mapping exists, attaches it to the certificate as an extension.
 
 An example cert is shown below:
 ```

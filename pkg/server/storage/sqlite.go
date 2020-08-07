@@ -62,7 +62,7 @@ func (s *SqliteStorage) RecordGitHubMapping(mapping map[string]string) error {
 		values = append(values, ssoIdentity)
 		values = append(values, githubUser)
 	}
-	// Create prepared statement with necessary number of (?, ?) values
+	// Create query with necessary number of (?, ?) values
 	stmt := fmt.Sprintf(
 		"INSERT OR REPLACE INTO github_user_mappings (sso_identity, github_username) VALUES %s",
 		strings.Join(entries, ","))
