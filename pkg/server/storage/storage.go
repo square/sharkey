@@ -27,6 +27,7 @@ type Storage interface {
 	// Record mapping of user identities to github username
 	RecordGitHubMapping(mapping map[string]string) error
 
+	// Retrieve github username given sso identity
 	QueryGitHubMapping(ssoIdentity string) (string, error)
 
 	Ping() error

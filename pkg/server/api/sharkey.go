@@ -87,7 +87,7 @@ func Run(conf *config.Config, logger *logrus.Logger) {
 	}
 
 	if c.conf.GitHub.Enabled {
-		if err := c.StartGitCron(); err != nil {
+		if err := c.StartGitHubUserMappingSyncJob(); err != nil {
 			logger.WithError(err)
 		}
 	}

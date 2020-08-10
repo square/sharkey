@@ -4,6 +4,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"io/ioutil"
+	"time"
 
 	"gopkg.in/yaml.v2"
 )
@@ -61,12 +62,12 @@ type AuthenticatingProxy struct {
 }
 
 type GitHub struct {
-	Enabled          bool   `yaml:"enabled"`
-	AppId            int64  `yaml:"app_id"`
-	InstallationId   int64  `yaml:"installation_id"`
-	PrivateKeyPath   string `yaml:"private_key_path"`
-	OrganizationName string `yaml:"organization_name"`
-	SyncInterval     string `yaml:"sync_interval"`
+	Enabled          bool          `yaml:"enabled"`
+	AppId            int64         `yaml:"app_id"`
+	InstallationId   int64         `yaml:"installation_id"`
+	PrivateKeyPath   string        `yaml:"private_key_path"`
+	OrganizationName string        `yaml:"organization_name"`
+	SyncInterval     time.Duration `yaml:"sync_interval"`
 }
 
 // buildConfig reads command-line options and builds a tls.Config

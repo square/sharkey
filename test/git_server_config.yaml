@@ -1,20 +1,17 @@
 ---
 db:
-  address: /tmp/test.db
+  address: test/test.db
   type: sqlite
 tls:
-  ca: /build/test/tls/CertAuth.crt
-  cert: /build/test/tls/server.crt
-  key: /build/test/tls/server.key
-signing_key: /build/test/keys/server_ca
+  ca: test/tls/CertAuth.crt
+  cert: test/tls/testCert.crt
+  key: test/tls/testCert.key
+signing_key: test/keys/server_ca
 host_cert_duration: 168h
 user_cert_duration: 24h
-listen_addr: "0.0.0.0:8080"
-aliases:
-  "client":
-    - "localhost"
+listen_addr: "127.0.0.1:8080"
 auth_proxy:
-  hostname: proxy
+  hostname: proxy.example.com
   username_header: X-Forwarded-User
 ssh:
   user_cert_extensions:

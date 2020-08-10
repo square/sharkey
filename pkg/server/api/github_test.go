@@ -6,6 +6,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"golang.org/x/crypto/ssh"
+
 	"github.com/sirupsen/logrus"
 	"github.com/sirupsen/logrus/hooks/test"
 	"github.com/square/sharkey/pkg/server/config"
@@ -51,6 +53,11 @@ func TestEmptyGitHubUser(t *testing.T) {
 		fmt.Println(string(body))
 		require.NoError(t, err, "unexpected error reading body")
 		require.Equal(t, 200, res.StatusCode, "failed to enroll user")
+
+		pubKey, _, _, _, err := ssh.ParseAuthorizedKey([]byte(body))
+		require.NoError(t, err, "unexpected error parsing public key")
+		assert.Equal(t, pubKey.(*ssh.Certificate).Extensions["login@github.com"], "")
+
 		hook.Reset()
 	}
 }
@@ -72,7 +79,7 @@ func TestGitHubUser(t *testing.T) {
 	require.NoError(t, err)
 	err = sqlite.Migrate("../../../db/sqlite/migrations")
 	require.NoError(t, err)
-	err = sqlite.RecordGitHubMapping(map[string]string{"alice": "alice"})
+	err = sqlite.RecordGitHubMapping(map[string]string{"alice": "alice_git"})
 	require.NoError(t, err)
 	c.storage = sqlite
 
@@ -98,6 +105,11 @@ func TestGitHubUser(t *testing.T) {
 		fmt.Println(string(body))
 		require.NoError(t, err, "unexpected error reading body")
 		require.Equal(t, 200, res.StatusCode, "failed to enroll user")
+
+		pubKey, _, _, _, err := ssh.ParseAuthorizedKey([]byte(body))
+		require.NoError(t, err, "unexpected error parsing public key")
+		assert.Equal(t, pubKey.(*ssh.Certificate).Extensions["login@github.com"], "alice_git")
+
 		hook.Reset()
 	}
 }
