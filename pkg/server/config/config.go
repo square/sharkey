@@ -35,6 +35,7 @@ type Config struct {
 	AuthenticatingProxy *AuthenticatingProxy `yaml:"auth_proxy"`
 	SSH                 SSH                  `yaml:"ssh"`
 	GitHub              GitHub               `yaml:"github"`
+	Metrics             Metrics              `yaml:"telemetry"`
 }
 
 type SSH struct {
@@ -69,6 +70,10 @@ type GitHub struct {
 	OrganizationName    string        `yaml:"organization_name"`
 	SyncInterval        time.Duration `yaml:"sync_interval"`
 	SyncEnabled         bool          `yaml:"sync_enabled"`
+}
+
+type Metrics struct {
+	Address string `yaml:"address"`
 }
 
 // buildConfig reads command-line options and builds a tls.Config

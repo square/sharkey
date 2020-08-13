@@ -2,19 +2,86 @@ package api
 
 import (
 	"fmt"
+	"io"
 	"io/ioutil"
+	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
-	"golang.org/x/crypto/ssh"
-
+	"github.com/armon/go-metrics"
+	"github.com/shurcooL/githubv4"
 	"github.com/sirupsen/logrus"
 	"github.com/sirupsen/logrus/hooks/test"
 	"github.com/square/sharkey/pkg/server/config"
 	"github.com/square/sharkey/pkg/server/storage"
+	"github.com/square/sharkey/pkg/server/telemetry"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/crypto/ssh"
 )
+
+type localRoundTripper struct {
+	handler http.Handler
+}
+
+func (l localRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
+	w := httptest.NewRecorder()
+	l.handler.ServeHTTP(w, req)
+	return w.Result(), nil
+}
+
+const sampleGitHubApiResult = `
+{
+  "data": {
+    "organization": {
+      "samlIdentityProvider": {
+        "externalIdentities": {
+          "edges": [
+            {
+              "node": {
+                "guid": "1234567890",
+                "samlIdentity": {
+                  "nameId": "alice"
+                },
+                "user": {
+                  "login": "alice_git"
+                }
+              }
+            },
+            {
+              "node": {
+                "guid": "1234567891",
+                "samlIdentity": {
+                  "nameId": "bob"
+                },
+                "user": {
+                  "login": "bob_git"
+                }
+              }
+            },
+            {
+              "node": {
+                "guid": "1234567892",
+                "samlIdentity": {
+                  "nameId": "carol"
+                },
+                "user": {
+                  "login": "carol_git"
+                }
+              }
+            }
+          ],
+		  "pageInfo": {
+            "hasNextPage": false,
+            "endCursor": ""
+          }
+        }
+      }
+    }
+  }
+}
+`
 
 func TestEmptyGitHubUser(t *testing.T) {
 	hostname := "proxy"
@@ -113,4 +180,37 @@ func TestGitHubUser(t *testing.T) {
 
 		hook.Reset()
 	}
+}
+
+func TestGitHubFetchMapping(t *testing.T) {
+	c, err := generateContext(t)
+	require.NoError(t, err)
+	c.metrics = &telemetry.Metrics{
+		Sink: metrics.NewInmemSink(10*time.Second, time.Minute),
+	}
+
+	mapping, err := c.fetchUserMappings(mockGitHubClient(t))
+	require.NoError(t, err, "error fetching github user mappings")
+	assert.Equal(t, len(mapping), 3)
+	assert.Equal(t, mapping["alice"], "alice_git")
+
+	inMemSink := c.metrics.Sink.(*metrics.InmemSink)
+	assert.Equal(t, len(inMemSink.Data()), 1)
+	assert.Equal(t, len(inMemSink.Data()[0].Gauges), 2)
+	assert.Equal(t, inMemSink.Data()[0].Gauges["github_fetched_users"].Value, float32(3))
+	assert.GreaterOrEqual(t, inMemSink.Data()[0].Gauges["github_fetch_latency"].Value, float32(100))
+	assert.Equal(t, len(inMemSink.Data()[0].Counters), 1)
+	assert.Equal(t, inMemSink.Data()[0].Counters["github_fetches"].Count, 1)
+}
+
+func mockGitHubClient(t *testing.T) *githubv4.Client {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/graphql", func(w http.ResponseWriter, req *http.Request) {
+		time.Sleep(100 * time.Millisecond)
+		assert.Equal(t, req.Method, http.MethodPost)
+		w.Header().Set("Content-Type", "application/json")
+		_, err := io.WriteString(w, sampleGitHubApiResult)
+		require.NoError(t, err)
+	})
+	return githubv4.NewClient(&http.Client{Transport: localRoundTripper{handler: mux}})
 }

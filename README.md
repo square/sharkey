@@ -279,3 +279,12 @@ An example cert is shown below:
                 permit-pty
                 permit-user-rc
 ```
+
+### Telemetry
+ 
+Sharkey supports sending DogStatsD metrics. Currently only metrics regarding GitHub SSH CA are being emitted.
+Adding the following block to the server configuration will enable metrics:
+```
+metrics:
+  address: "127.0.0.1:8200"
+``` 

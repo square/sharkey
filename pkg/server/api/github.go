@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/bradleyfalzon/ghinstallation"
 	"github.com/robfig/cron/v3"
@@ -30,14 +31,12 @@ func (c *Api) getClient() *githubv4.Client {
 	return githubv4.NewClient(&http.Client{Transport: itr})
 }
 
-func (c *Api) fetchUserMappings() (map[string]string, error) {
-	client := c.getClient()
-
+func (c *Api) fetchUserMappings(client *githubv4.Client) (map[string]string, error) {
+	fetchStart := time.Now()
 	// Original GraphQL query to retrieve mapping of SAML Identity to GitHub Username
 	// query {
 	//   organization(login: organization) {
 	// 	   samlIdentityProvider {
-	//	     ssoUrl
 	//	     externalIdentities(first: 100) {
 	//	       edges {
 	//		     node {
@@ -57,7 +56,6 @@ func (c *Api) fetchUserMappings() (map[string]string, error) {
 	var query struct {
 		Organization struct {
 			SamlIdentityProvider struct {
-				SsoUrl             githubv4.String
 				ExternalIdentities struct {
 					Edges []struct {
 						Node struct {
@@ -108,11 +106,16 @@ func (c *Api) fetchUserMappings() (map[string]string, error) {
 		variables["cursor"] = pageInfo.EndCursor
 	}
 
+	c.metrics.Sink.IncrCounter([]string{"github_fetches"}, 1)
+	c.metrics.Sink.SetGauge([]string{"github_fetch_latency"}, float32(time.Since(fetchStart).Milliseconds()))
+	c.metrics.Sink.SetGauge([]string{"github_fetched_users"}, float32(len(mapping)))
 	return mapping, nil
 }
 
 func (c *Api) updateUserMappings() {
-	mapping, err := c.fetchUserMappings()
+	fetchStart := time.Now()
+	client := c.getClient()
+	mapping, err := c.fetchUserMappings(client)
 	if err != nil {
 		c.logger.Errorf("unable to retrieve github mapping: %s", err)
 		return
@@ -121,6 +124,7 @@ func (c *Api) updateUserMappings() {
 	if err := c.storage.RecordGitHubMapping(mapping); err != nil {
 		c.logger.Errorf("unable to record github mapping: %s", err)
 	}
+	c.metrics.Sink.SetGauge([]string{"sync_job_latency"}, float32(time.Since(fetchStart).Milliseconds()))
 }
 
 func (c *Api) RetrieveGitHubUsername(ssoIdentity string) (string, error) {

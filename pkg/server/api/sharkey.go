@@ -18,6 +18,7 @@ package api
 
 import (
 	"encoding/json"
+	"github.com/square/sharkey/pkg/server/telemetry"
 	"io/ioutil"
 	"net/http"
 
@@ -42,6 +43,7 @@ type Api struct {
 	storage storage.Storage
 	conf    *config.Config
 	logger  *logrus.Logger
+	metrics *telemetry.Metrics
 }
 
 func Run(conf *config.Config, logger *logrus.Logger) {
@@ -67,6 +69,14 @@ func Run(conf *config.Config, logger *logrus.Logger) {
 		signer:  signer,
 		storage: storage,
 		logger:  logger,
+	}
+
+	if c.conf.Metrics.Address != "" {
+		metrics, err := telemetry.CreateMetrics(c.conf.Metrics.Address)
+		if err != nil {
+			logger.WithError(err).Fatal("unable to setup telemetry")
+		}
+		c.metrics = metrics
 	}
 
 	handler := mux.NewRouter()
