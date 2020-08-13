@@ -18,6 +18,7 @@ package api
 
 import (
 	"encoding/json"
+	"github.com/square/sharkey/pkg/server/metrics"
 	"io/ioutil"
 	"net/http"
 
@@ -42,6 +43,7 @@ type Api struct {
 	storage storage.Storage
 	conf    *config.Config
 	logger  *logrus.Logger
+	metrics *metrics.Metrics
 }
 
 func Run(conf *config.Config, logger *logrus.Logger) {
@@ -67,6 +69,7 @@ func Run(conf *config.Config, logger *logrus.Logger) {
 		signer:  signer,
 		storage: storage,
 		logger:  logger,
+		metrics: metrics.CreateMetrics("127.0.0.1:8200"),
 	}
 
 	handler := mux.NewRouter()
