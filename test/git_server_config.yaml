@@ -1,7 +1,9 @@
 ---
 db:
-  address: test/test.db
-  type: sqlite
+  address: localhost:3306
+  type: mysql
+  username: root
+  schema: sharkey_test
 tls:
   ca: test/tls/CertAuth.crt
   cert: test/tls/testCert.crt
@@ -23,10 +25,10 @@ ssh:
 github:
   include_user_identity: true
   # fill with github app info
-  app_id: 1
-  installation_id: 1
+  app_id: 75199
+  installation_id: 10972895
   # github app private key file location
-  private_key_path: ""
-  organization_name: ""
+  private_key_path: "/Users/roy/Downloads/roy-test-sharkey.2020-08-11.private-key.pem"
+  organization_name: "squareup"
   sync_interval: "5m"
-  sync_enabled: false
+  sync_enabled: true
