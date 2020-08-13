@@ -5,6 +5,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/square/sharkey/pkg/client"
+	"github.com/square/sharkey/pkg/common/version"
 	"gopkg.in/alecthomas/kingpin.v2"
 	"gopkg.in/yaml.v2"
 )
@@ -14,7 +15,7 @@ func Run(args []string, logger *logrus.Logger) {
 
 	app := kingpin.New("sharkey-client", "Certificate client of the ssh-ca system.")
 	configPath := app.Flag("config", "Path to config file for client.").Required().String()
-	app.Version("0.0.1")
+	app.Version(version.Version())
 
 	kingpin.MustParse(app.Parse(args))
 
