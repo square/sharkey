@@ -19,7 +19,6 @@ package api
 import (
 	"crypto/tls"
 	"crypto/x509"
-	"crypto/x509/pkix"
 	"errors"
 	"fmt"
 	"io"
@@ -318,12 +317,9 @@ func generateContext(t *testing.T) (*Api, error) {
 	return c, nil
 }
 
-func generateRequest(cn string, body io.ReadCloser) (*http.Request, error) {
-	sub := pkix.Name{
-		CommonName: cn,
-	}
+func generateRequest(hostname string, body io.ReadCloser) (*http.Request, error) {
 	cert := x509.Certificate{
-		Subject: sub,
+		DNSNames: []string{hostname},
 	}
 	chain := [][]*x509.Certificate{{&cert}}
 	conn := tls.ConnectionState{
