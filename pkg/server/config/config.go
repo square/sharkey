@@ -4,6 +4,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"io/ioutil"
+	"time"
 
 	"gopkg.in/yaml.v2"
 )
@@ -33,6 +34,7 @@ type Config struct {
 	ExtraKnownHosts     []string             `yaml:"extra_known_hosts"`
 	AuthenticatingProxy *AuthenticatingProxy `yaml:"auth_proxy"`
 	SSH                 SSH                  `yaml:"ssh"`
+	GitHub              GitHub               `yaml:"github"`
 }
 
 type SSH struct {
@@ -57,6 +59,16 @@ type Database struct {
 type AuthenticatingProxy struct {
 	Hostname       string `yaml:"hostname"`
 	UsernameHeader string `yaml:"username_header"`
+}
+
+type GitHub struct {
+	IncludeUserIdentity bool          `yaml:"include_user_identity"`
+	AppId               int64         `yaml:"app_id"`
+	InstallationId      int64         `yaml:"installation_id"`
+	PrivateKeyPath      string        `yaml:"private_key_path"`
+	OrganizationName    string        `yaml:"organization_name"`
+	SyncInterval        time.Duration `yaml:"sync_interval"`
+	SyncEnabled         bool          `yaml:"sync_enabled"`
 }
 
 // buildConfig reads command-line options and builds a tls.Config

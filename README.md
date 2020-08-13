@@ -242,3 +242,40 @@ Testing looks something like this:
 
 But in production use you'd expect it more like
    `curl <auth to your proxy> https://ssoproxy.example.com/enroll_user -d @~/.ssh/bob.pub`
+
+### GitHub SSH CA Support
+
+Sharkey supports issuing user certificates that are compatible with GitHub SSH CA format by:
+
+- Mapping a GitHub username to a SAML identity
+- Including appropriate GitHub username in each certificate
+
+GitHub supports authentication using SSH certificates for Enterprise Cloud accounts. The only requirement is that certificates include GitHub usernames, so that they can be matched to a particular user.
+
+Sharkey already requires SSO proxy for the user certificate feature. Additionally, the GitHub integration requires that the GitHub organization is configured with SSO (i.e. non-GitHub) access.
+
+An example config with GitHub SSH CA Support enabled can be found in `test/git_server_config.yaml`.
+A GitHub App with read/write access to `Organization:members` is required. 
+
+Sharkey will periodically query GitHub for a mapping of SAML identities to GitHub usernames and store it in Sharkey's DB. 
+When issuing a certificate, Sharkey will check the DB and if a mapping exists, attaches it to the certificate as an extension.
+
+An example cert is shown below:
+```
+        Type: ssh-rsa-cert-v01@openssh.com user certificate
+        Public key: RSA-CERT SHA256:Eabuov2aAPLhN1FscJ6P3Lle85N6Txhj4sy4ALTkG6M
+        Signing CA: ED25519 SHA256:HYgRf1dHbVtWY/e3jjfnAlwvAPPBKYxdXz8SDfhlAws (using ssh-ed25519)
+        Key ID: "alice"
+        Serial: 1
+        Valid: from 2020-07-31T16:10:25 to 2020-08-01T16:10:25
+        Principals:
+                alice
+        Critical Options: (none)
+        Extensions:
+                login@github.com UNKNOWN OPTION (len 5)
+                permit-X11-forwarding
+                permit-agent-forwarding
+                permit-port-forwarding
+                permit-pty
+                permit-user-rc
+```

@@ -11,6 +11,8 @@ import (
 func purge(t *testing.T, db *sql.DB) {
 	_, err := db.Exec("DROP TABLE IF EXISTS hostkeys")
 	require.NoError(t, err)
+	_, err = db.Exec("DROP TABLE IF EXISTS github_user_mappings")
+	require.NoError(t, err)
 	_, err = db.Exec("DROP TABLE IF EXISTS goose_db_version")
 	require.NoError(t, err)
 
@@ -49,6 +51,7 @@ func TestMysql(t *testing.T) {
 	require.NoError(t, storage.Ping())
 
 	testStorage(t, storage)
+	testGitHubStorage(t, storage)
 
 	// Drop data after test finishes
 	purge(t, storage.DB)

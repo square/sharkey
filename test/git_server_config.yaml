@@ -1,0 +1,32 @@
+---
+db:
+  address: test/test.db
+  type: sqlite
+tls:
+  ca: test/tls/CertAuth.crt
+  cert: test/tls/testCert.crt
+  key: test/tls/testCert.key
+signing_key: test/keys/server_ca
+host_cert_duration: 168h
+user_cert_duration: 24h
+listen_addr: "127.0.0.1:8080"
+auth_proxy:
+  hostname: proxy.example.com
+  username_header: X-Forwarded-User
+ssh:
+  user_cert_extensions:
+    - "permit-X11-forwarding"
+    - "permit-agent-forwarding"
+    - "permit-port-forwarding"
+    - "permit-pty"
+    - "permit-user-rc"
+github:
+  include_user_identity: true
+  # fill with github app info
+  app_id: 1
+  installation_id: 1
+  # github app private key file location
+  private_key_path: ""
+  organization_name: ""
+  sync_interval: "5m"
+  sync_enabled: false

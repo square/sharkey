@@ -3,6 +3,7 @@ package storage
 import (
 	"database/sql"
 	"fmt"
+	"strings"
 
 	"bitbucket.org/liamstask/goose/lib/goose"
 	_ "github.com/mattn/go-sqlite3"
@@ -48,6 +49,40 @@ func (s *SqliteStorage) QueryHostkeys() (ResultIterator, error) {
 		return &SqlResultIterator{}, err
 	}
 	return &SqlResultIterator{Rows: rows}, nil
+}
+
+func (s *SqliteStorage) RecordGitHubMapping(mapping map[string]string) error {
+	// Prepare for batch insert
+	entries := make([]string, 0, len(mapping))
+	values := make([]interface{}, 0, len(mapping)*2)
+	for ssoIdentity, githubUser := range mapping {
+		// Create one set of values for each mapping
+		entries = append(entries, "(?, ?)")
+		// Append matching values for mapping
+		values = append(values, ssoIdentity)
+		values = append(values, githubUser)
+	}
+	// Create query with necessary number of (?, ?) values
+	stmt := fmt.Sprintf(
+		"INSERT OR REPLACE INTO github_user_mappings (sso_identity, github_username) VALUES %s",
+		strings.Join(entries, ","))
+	// Execute with blown up values that match into the (?, ?) blocks inserted into the statement
+	_, err := s.DB.Exec(stmt, values...)
+	if err != nil {
+		return fmt.Errorf("error recording mapping: %s", err.Error())
+	}
+
+	return nil
+}
+
+func (s *SqliteStorage) QueryGitHubMapping(ssoIdentity string) (string, error) {
+	row := s.DB.QueryRow("SELECT github_username FROM github_user_mappings WHERE sso_identity = ?", ssoIdentity)
+	var githubUser string
+	if err := row.Scan(&githubUser); err != nil {
+		return "", err
+	}
+
+	return githubUser, nil
 }
 
 func (s *SqliteStorage) Migrate(migrationsDir string) error {

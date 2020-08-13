@@ -24,6 +24,12 @@ type Storage interface {
 	// Takes a path to DB migration locations
 	Migrate(string) error
 
+	// Record mapping of user identities to github username
+	RecordGitHubMapping(mapping map[string]string) error
+
+	// Retrieve github username given sso identity
+	QueryGitHubMapping(ssoIdentity string) (string, error)
+
 	Ping() error
 	Close() error
 }

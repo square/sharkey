@@ -86,6 +86,12 @@ func Run(conf *config.Config, logger *logrus.Logger) {
 		Handler:   loggingHandler,
 	}
 
+	if c.conf.GitHub.SyncEnabled {
+		if err := c.StartGitHubUserMappingSyncJob(); err != nil {
+			logger.WithError(err)
+		}
+	}
+
 	err = server.ListenAndServeTLS(conf.TLS.Cert, conf.TLS.Key)
 	logger.WithError(err).Fatal("issue with ListenAndServeTLS")
 }
