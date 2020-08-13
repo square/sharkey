@@ -2,6 +2,7 @@ package cli
 
 import (
 	"github.com/sirupsen/logrus"
+	"github.com/square/sharkey/pkg/common/version"
 	"github.com/square/sharkey/pkg/server/api"
 	"github.com/square/sharkey/pkg/server/config"
 	"gopkg.in/alecthomas/kingpin.v2"
@@ -10,7 +11,7 @@ import (
 // Run is the main entry point to the server.  It parses command line flags and config file.
 func Run(args []string, logger *logrus.Logger) {
 	app := kingpin.New("sharkey-server", "Certificate issuer of the ssh-ca system.")
-	app.Version("0.0.1")
+	app.Version(version.Version())
 
 	configPath := app.Flag("config", "Path to config file for server.").Required().ExistingFile()
 
