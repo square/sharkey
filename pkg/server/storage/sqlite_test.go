@@ -20,4 +20,5 @@ func TestSqlite(t *testing.T) {
 	require.NoError(t, storage.Migrate("../../../db/sqlite/migrations"))
 
 	testStorage(t, storage)
+	testGitHubStorage(t, storage)
 }

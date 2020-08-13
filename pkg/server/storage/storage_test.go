@@ -39,3 +39,43 @@ func testStorage(t *testing.T, storage Storage) {
 
 	require.False(t, rows.Next())
 }
+
+func testGitHubStorage(t *testing.T, storage Storage) {
+	username1 := "alice"
+	gitUsername1 := "alice_git"
+	username2 := "bob"
+	gitUsername2 := "bob_git"
+	initialMapping := map[string]string{
+		username1: gitUsername1,
+		username2: gitUsername2,
+	}
+	err := storage.RecordGitHubMapping(initialMapping)
+	require.NoError(t, err)
+
+	queriedUsername1, err := storage.QueryGitHubMapping(username1)
+	require.NoError(t, err)
+	require.Equal(t, queriedUsername1, gitUsername1)
+
+	queriedUsername2, err := storage.QueryGitHubMapping(username2)
+	require.NoError(t, err)
+	require.Equal(t, queriedUsername2, gitUsername2)
+
+	username3 := "carol"
+	gitUsername3 := "carol_git"
+	modifiedGitUsername1 := "alice_git_modified"
+	updatedMapping := map[string]string{
+		username3: gitUsername3,
+		username1: modifiedGitUsername1,
+	}
+
+	err = storage.RecordGitHubMapping(updatedMapping)
+	require.NoError(t, err)
+
+	queriedModifiedUsername1, err := storage.QueryGitHubMapping(username1)
+	require.NoError(t, err)
+	require.Equal(t, queriedModifiedUsername1, modifiedGitUsername1)
+
+	queriedUsername3, err := storage.QueryGitHubMapping(username3)
+	require.NoError(t, err)
+	require.Equal(t, queriedUsername3, gitUsername3)
+}

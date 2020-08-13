@@ -51,6 +51,7 @@ func TestMysql(t *testing.T) {
 	require.NoError(t, storage.Ping())
 
 	testStorage(t, storage)
+	testGitHubStorage(t, storage)
 
 	// Drop data after test finishes
 	purge(t, storage.DB)

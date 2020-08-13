@@ -21,7 +21,7 @@ ssh:
     - "permit-pty"
     - "permit-user-rc"
 github:
-  enabled: true
+  include_user_identity: true
   # fill with github app info
   app_id: 1
   installation_id: 1
@@ -29,3 +29,4 @@ github:
   private_key_path: ""
   organization_name: ""
   sync_interval: "5m"
+  sync_enabled: false

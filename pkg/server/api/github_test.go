@@ -27,7 +27,7 @@ func TestEmptyGitHubUser(t *testing.T) {
 		Hostname:       hostname,
 		UsernameHeader: header,
 	}
-	c.conf.GitHub.Enabled = true
+	c.conf.GitHub.IncludeUserIdentity = true
 
 	hook := test.NewLocal(c.logger)
 
@@ -56,7 +56,8 @@ func TestEmptyGitHubUser(t *testing.T) {
 
 		pubKey, _, _, _, err := ssh.ParseAuthorizedKey([]byte(body))
 		require.NoError(t, err, "unexpected error parsing public key")
-		assert.Equal(t, pubKey.(*ssh.Certificate).Extensions["login@github.com"], "")
+		_, ok := pubKey.(*ssh.Certificate).Extensions["login@github.com"]
+		assert.Equal(t, ok, false)
 
 		hook.Reset()
 	}
@@ -73,7 +74,7 @@ func TestGitHubUser(t *testing.T) {
 		Hostname:       hostname,
 		UsernameHeader: header,
 	}
-	c.conf.GitHub.Enabled = true
+	c.conf.GitHub.IncludeUserIdentity = true
 
 	sqlite, err := storage.NewSqlite(config.Database{Address: ":memory:"})
 	require.NoError(t, err)

@@ -112,15 +112,15 @@ func (c *Api) fetchUserMappings() (map[string]string, error) {
 }
 
 func (c *Api) updateUserMappings() {
-	//mapping, err := c.fetchUserMappings()
-	//if err != nil {
-	//	c.logger.Errorf("unable to retrieve github mapping: %s", err)
-	//}
-	//
-	//if err := c.storage.RecordGitHubMapping(mapping); err != nil {
-	//	c.logger.Errorf("unable to record github mapping: %s", err)
-	//}
-	c.logger.Println("hi")
+	mapping, err := c.fetchUserMappings()
+	if err != nil {
+		c.logger.Errorf("unable to retrieve github mapping: %s", err)
+		return
+	}
+
+	if err := c.storage.RecordGitHubMapping(mapping); err != nil {
+		c.logger.Errorf("unable to record github mapping: %s", err)
+	}
 }
 
 func (c *Api) RetrieveGitHubUsername(ssoIdentity string) (string, error) {
@@ -134,7 +134,7 @@ func (c *Api) RetrieveGitHubUsername(ssoIdentity string) (string, error) {
 }
 
 func (c *Api) StartGitHubUserMappingSyncJob() error {
-	c.logger.Println(c.conf.GitHub.SyncInterval)
+	c.logger.Printf("Starting GitHubUserMappingSyncJob to run every %s", c.conf.GitHub.SyncInterval)
 	// The cron doesn't initially run, so we run it first before kick off the cron
 	c.updateUserMappings()
 	job := cron.New()

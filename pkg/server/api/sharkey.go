@@ -86,7 +86,7 @@ func Run(conf *config.Config, logger *logrus.Logger) {
 		Handler:   loggingHandler,
 	}
 
-	if c.conf.GitHub.Enabled {
+	if c.conf.GitHub.SyncEnabled {
 		if err := c.StartGitHubUserMappingSyncJob(); err != nil {
 			logger.WithError(err)
 		}
