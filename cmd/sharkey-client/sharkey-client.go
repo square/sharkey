@@ -8,6 +8,7 @@ import (
 )
 
 func main() {
+	//Random comment for testing
 	var logger = logrus.New()
 	cli.Run(os.Args[1:], logger)
 }
