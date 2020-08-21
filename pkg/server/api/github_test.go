@@ -185,16 +185,17 @@ func TestGitHubUser(t *testing.T) {
 func TestGitHubFetchMapping(t *testing.T) {
 	c, err := generateContext(t)
 	require.NoError(t, err)
-	c.metrics = &telemetry.Metrics{
+	c.telemetry = &telemetry.Telemetry{
 		Sink: metrics.NewInmemSink(10*time.Second, time.Minute),
 	}
+	c.gitHubClient = mockGitHubClient(t)
 
-	mapping, err := c.fetchUserMappings(mockGitHubClient(t))
+	mapping, err := c.fetchUserMappings()
 	require.NoError(t, err, "error fetching github user mappings")
 	assert.Equal(t, len(mapping), 3)
 	assert.Equal(t, mapping["alice"], "alice_git")
 
-	inMemSink := c.metrics.Sink.(*metrics.InmemSink)
+	inMemSink := c.telemetry.Sink.(*metrics.InmemSink)
 	assert.Equal(t, len(inMemSink.Data()), 1)
 	assert.Equal(t, len(inMemSink.Data()[0].Gauges), 2)
 	assert.Equal(t, inMemSink.Data()[0].Gauges["github_fetched_users"].Value, float32(3))

@@ -35,7 +35,7 @@ type Config struct {
 	AuthenticatingProxy *AuthenticatingProxy `yaml:"auth_proxy"`
 	SSH                 SSH                  `yaml:"ssh"`
 	GitHub              GitHub               `yaml:"github"`
-	Metrics             Metrics              `yaml:"telemetry"`
+	Telemetry           Telemetry            `yaml:"telemetry"`
 }
 
 type SSH struct {
@@ -72,7 +72,7 @@ type GitHub struct {
 	SyncEnabled         bool          `yaml:"sync_enabled"`
 }
 
-type Metrics struct {
+type Telemetry struct {
 	Address string `yaml:"address"`
 }
 

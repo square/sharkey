@@ -285,6 +285,7 @@ An example cert is shown below:
 Sharkey supports sending DogStatsD metrics. Currently only metrics regarding GitHub SSH CA are being emitted.
 Adding the following block to the server configuration will enable metrics:
 ```
-metrics:
+telemetry:
   address: "127.0.0.1:8200"
 ``` 
+Unix sockets are also supported.

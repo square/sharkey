@@ -18,7 +18,6 @@ package api
 
 import (
 	"encoding/json"
-	"github.com/square/sharkey/pkg/server/telemetry"
 	"io/ioutil"
 	"net/http"
 
@@ -26,9 +25,11 @@ import (
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	_ "github.com/mattn/go-sqlite3"
+	"github.com/shurcooL/githubv4"
 	"github.com/sirupsen/logrus"
 	"github.com/square/sharkey/pkg/server/config"
 	"github.com/square/sharkey/pkg/server/storage"
+	"github.com/square/sharkey/pkg/server/telemetry"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -39,11 +40,12 @@ type statusResponse struct {
 }
 
 type Api struct {
-	signer  ssh.Signer
-	storage storage.Storage
-	conf    *config.Config
-	logger  *logrus.Logger
-	metrics *telemetry.Metrics
+	signer       ssh.Signer
+	storage      storage.Storage
+	conf         *config.Config
+	logger       *logrus.Logger
+	telemetry    *telemetry.Telemetry
+	gitHubClient *githubv4.Client
 }
 
 func Run(conf *config.Config, logger *logrus.Logger) {
@@ -71,12 +73,12 @@ func Run(conf *config.Config, logger *logrus.Logger) {
 		logger:  logger,
 	}
 
-	if c.conf.Metrics.Address != "" {
-		metrics, err := telemetry.CreateMetrics(c.conf.Metrics.Address)
+	if c.conf.Telemetry.Address != "" {
+		telemetry, err := telemetry.CreateTelemetry(c.conf.Telemetry.Address)
 		if err != nil {
 			logger.WithError(err).Fatal("unable to setup telemetry")
 		}
-		c.metrics = metrics
+		c.telemetry = telemetry
 	}
 
 	handler := mux.NewRouter()
@@ -97,6 +99,7 @@ func Run(conf *config.Config, logger *logrus.Logger) {
 	}
 
 	if c.conf.GitHub.SyncEnabled {
+		c.gitHubClient = c.CreateGitHubClient()
 		if err := c.StartGitHubUserMappingSyncJob(); err != nil {
 			logger.WithError(err)
 		}
