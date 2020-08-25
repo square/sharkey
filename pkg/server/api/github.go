@@ -107,9 +107,10 @@ func (c *Api) fetchUserMappings() (map[string]string, error) {
 		variables["cursor"] = pageInfo.EndCursor
 	}
 
-	c.telemetry.Sink.IncrCounter([]string{telemetry.GitHubFetches}, 1)
-	c.telemetry.Sink.SetGauge([]string{telemetry.GitHubFetchLatency}, float32(time.Since(fetchStart).Milliseconds()))
-	c.telemetry.Sink.SetGauge([]string{telemetry.GitHubFetchedUsers}, float32(len(mapping)))
+	c.telemetry.Metrics.IncrCounter([]string{telemetry.GitHub, telemetry.Fetch, telemetry.Calls}, 1)
+	c.telemetry.Metrics.SetGauge(
+		[]string{telemetry.GitHub, telemetry.Fetch, telemetry.Latency}, float32(time.Since(fetchStart).Milliseconds()))
+	c.telemetry.Metrics.SetGauge([]string{telemetry.GitHub, telemetry.Fetch, telemetry.Count}, float32(len(mapping)))
 	return mapping, nil
 }
 
@@ -124,7 +125,9 @@ func (c *Api) updateUserMappings() {
 	if err := c.storage.RecordGitHubMapping(mapping); err != nil {
 		c.logger.Errorf("unable to record github mapping: %s", err)
 	}
-	c.telemetry.Sink.SetGauge([]string{telemetry.GitHubSyncJobLatency}, float32(time.Since(fetchStart).Milliseconds()))
+	c.telemetry.Metrics.SetGauge(
+		[]string{telemetry.GitHub, telemetry.SyncJob, telemetry.Latency},
+		float32(time.Since(fetchStart).Milliseconds()))
 }
 
 func (c *Api) RetrieveGitHubUsername(ssoIdentity string) (string, error) {

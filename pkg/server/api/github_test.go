@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -82,6 +83,13 @@ const sampleGitHubApiResult = `
   }
 }
 `
+
+var (
+	githubFetchPrefix  = strings.Join([]string{telemetry.Service, telemetry.GitHub, telemetry.Fetch}, ".")
+	gitHubFetchCalls   = strings.Join([]string{githubFetchPrefix, telemetry.Calls}, ".")
+	gitHubFetchCount   = strings.Join([]string{githubFetchPrefix, telemetry.Count}, ".")
+	gitHubFetchLatency = strings.Join([]string{githubFetchPrefix, telemetry.Latency}, ".")
+)
 
 func TestEmptyGitHubUser(t *testing.T) {
 	hostname := "proxy"
@@ -185,8 +193,12 @@ func TestGitHubUser(t *testing.T) {
 func TestGitHubFetchMapping(t *testing.T) {
 	c, err := generateContext(t)
 	require.NoError(t, err)
+	inMemSink := metrics.NewInmemSink(10*time.Second, time.Minute)
+	metricsImpl, err := metrics.New(metrics.DefaultConfig(telemetry.Service), inMemSink)
+	metricsImpl.EnableHostname = false
+	require.NoError(t, err)
 	c.telemetry = &telemetry.Telemetry{
-		Sink: metrics.NewInmemSink(10*time.Second, time.Minute),
+		Metrics: metricsImpl,
 	}
 	c.gitHubClient = mockGitHubClient(t)
 
@@ -195,13 +207,12 @@ func TestGitHubFetchMapping(t *testing.T) {
 	assert.Equal(t, len(mapping), 3)
 	assert.Equal(t, mapping["alice"], "alice_git")
 
-	inMemSink := c.telemetry.Sink.(*metrics.InmemSink)
 	assert.Equal(t, len(inMemSink.Data()), 1)
 	assert.Equal(t, len(inMemSink.Data()[0].Gauges), 2)
-	assert.Equal(t, inMemSink.Data()[0].Gauges["github_fetched_users"].Value, float32(3))
-	assert.GreaterOrEqual(t, inMemSink.Data()[0].Gauges["github_fetch_latency"].Value, float32(100))
+	assert.Equal(t, inMemSink.Data()[0].Gauges[gitHubFetchCount].Value, float32(3))
+	assert.GreaterOrEqual(t, inMemSink.Data()[0].Gauges[gitHubFetchLatency].Value, float32(100))
 	assert.Equal(t, len(inMemSink.Data()[0].Counters), 1)
-	assert.Equal(t, inMemSink.Data()[0].Counters["github_fetches"].Count, 1)
+	assert.Equal(t, inMemSink.Data()[0].Counters[gitHubFetchCalls].Count, 1)
 }
 
 func mockGitHubClient(t *testing.T) *githubv4.Client {

@@ -1,25 +1,31 @@
 package telemetry
 
 import (
+	"github.com/armon/go-metrics"
 	"github.com/armon/go-metrics/datadog"
 )
 
 const (
-	GitHubSyncJobLatency = "github_sync_job_latency"
-	GitHubFetches        = "github_fetches"
-	GitHubFetchLatency   = "github_fetch_latency"
-	GitHubFetchedUsers   = "github_fetched_users"
+	// Prepended to metrics
+	Service = "sharkey"
+
+	// metrics related to github, should be used with other tags
+	GitHub = "github"
+
+	// metrics related to background sync jobs, should be used with a broader tag such as "github"
+	SyncJob = "sync_job"
+
+	// metrics related to fetching, should be used with a broader tag such as "github"
+	Fetch = "fetch"
+
+	// tags that describe the metric being fetched, should be used with other tags
+	Calls   = "calls"
+	Latency = "latency"
+	Count   = "count"
 )
 
-type MetricSink interface {
-	// labels are a list of metrics that should be updated with the value
-	// for 1:1 label to value metric, use an array with a single label
-	IncrCounter(labels []string, value float32)
-	SetGauge(labels []string, value float32)
-}
-
 type Telemetry struct {
-	Sink MetricSink
+	Metrics *metrics.Metrics
 }
 
 func CreateTelemetry(addr string) (*Telemetry, error) {
@@ -27,7 +33,13 @@ func CreateTelemetry(addr string) (*Telemetry, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	metricsImpl, err := metrics.New(metrics.DefaultConfig(Service), sink)
+	metricsImpl.EnableHostname = false
+	if err != nil {
+		return nil, err
+	}
 	return &Telemetry{
-		Sink: sink,
+		Metrics: metricsImpl,
 	}, nil
 }
