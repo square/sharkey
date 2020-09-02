@@ -3,13 +3,14 @@ module github.com/square/sharkey
 require (
 	bitbucket.org/liamstask/goose v0.0.0-20150115234039-8488cc47d90c
 	github.com/PuerkitoBio/goquery v1.5.1 // indirect
-	github.com/alecthomas/template v0.0.0-20160405071501-a0175ee3bccc // indirect
-	github.com/alecthomas/units v0.0.0-20151022065526-2efee857e7cf // indirect
+	github.com/armon/go-metrics v0.3.4
 	github.com/bradleyfalzon/ghinstallation v1.1.1
 	github.com/go-sql-driver/mysql v1.5.0
 	github.com/google/go-github/v29 v29.0.3 // indirect
 	github.com/gorilla/handlers v1.5.0
 	github.com/gorilla/mux v1.8.0
+	github.com/hashicorp/go-immutable-radix v1.2.0 // indirect
+	github.com/hashicorp/golang-lru v0.5.4 // indirect
 	github.com/kr/pretty v0.1.0 // indirect
 	github.com/kylelemons/go-gypsy v0.0.0-20160905020020-08cad365cd28 // indirect
 	github.com/lib/pq v1.8.0 // indirect
@@ -26,7 +27,6 @@ require (
 	golang.org/x/net v0.0.0-20200707034311-ab3426394381 // indirect
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
-	gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127 // indirect
 	gopkg.in/yaml.v2 v2.3.0
 )
 

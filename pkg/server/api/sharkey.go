@@ -25,9 +25,11 @@ import (
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	_ "github.com/mattn/go-sqlite3"
+	"github.com/shurcooL/githubv4"
 	"github.com/sirupsen/logrus"
 	"github.com/square/sharkey/pkg/server/config"
 	"github.com/square/sharkey/pkg/server/storage"
+	"github.com/square/sharkey/pkg/server/telemetry"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -38,10 +40,12 @@ type statusResponse struct {
 }
 
 type Api struct {
-	signer  ssh.Signer
-	storage storage.Storage
-	conf    *config.Config
-	logger  *logrus.Logger
+	signer       ssh.Signer
+	storage      storage.Storage
+	conf         *config.Config
+	logger       *logrus.Logger
+	telemetry    *telemetry.Telemetry
+	gitHubClient *githubv4.Client
 }
 
 func Run(conf *config.Config, logger *logrus.Logger) {
@@ -69,6 +73,14 @@ func Run(conf *config.Config, logger *logrus.Logger) {
 		logger:  logger,
 	}
 
+	if c.conf.Telemetry.Address != "" {
+		telemetry, err := telemetry.CreateTelemetry(c.conf.Telemetry.Address)
+		if err != nil {
+			logger.WithError(err).Fatal("unable to setup telemetry")
+		}
+		c.telemetry = telemetry
+	}
+
 	handler := mux.NewRouter()
 	handler.Path("/enroll/{hostname}").Methods("POST").HandlerFunc(c.Enroll)
 	handler.Path("/enroll_user").Methods("POST").HandlerFunc(c.EnrollUser)
@@ -87,6 +99,7 @@ func Run(conf *config.Config, logger *logrus.Logger) {
 	}
 
 	if c.conf.GitHub.SyncEnabled {
+		c.gitHubClient = c.CreateGitHubClient()
 		if err := c.StartGitHubUserMappingSyncJob(); err != nil {
 			logger.WithError(err)
 		}

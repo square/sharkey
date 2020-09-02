@@ -20,3 +20,5 @@ ssh:
     - "permit-port-forwarding"
     - "permit-pty"
     - "permit-user-rc"
+telemetry:
+  address: "127.0.0.1:8200"
