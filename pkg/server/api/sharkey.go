@@ -18,6 +18,7 @@ package api
 
 import (
 	"encoding/json"
+	"github.com/square/sharkey/pkg/common/sign"
 	"io/ioutil"
 	"net/http"
 
@@ -40,7 +41,7 @@ type statusResponse struct {
 }
 
 type Api struct {
-	signer       ssh.Signer
+	signer       sign.Signer
 	storage      storage.Storage
 	conf         *config.Config
 	logger       *logrus.Logger
@@ -55,16 +56,18 @@ func Run(conf *config.Config, logger *logrus.Logger) {
 		logger.WithError(err).Fatal("unable to read signing key file")
 	}
 
-	signer, err := ssh.ParsePrivateKey(privateKey)
-	if err != nil {
-		logger.WithError(err).Fatal("unable to parse signing key data")
-	}
-
 	storage, err := storage.FromConfig(conf.Database)
 	if err != nil {
 		logger.WithError(err).Fatal("unable to setup database")
 	}
 	defer storage.Close()
+
+	sshSigner, err := ssh.ParsePrivateKey(privateKey)
+	if err != nil {
+		logger.WithError(err).Fatal("unable to parse signing key data")
+	}
+
+	signer := sign.NewSigner(sshSigner, conf, storage)
 
 	c := Api{
 		conf:    conf,
