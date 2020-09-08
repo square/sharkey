@@ -17,19 +17,17 @@
 package api
 
 import (
-	"crypto/rand"
 	"encoding/base64"
 	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"strings"
-	"time"
-
-	"github.com/square/sharkey/pkg/server/config"
 
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
+	"github.com/square/sharkey/pkg/server/cert"
+	"github.com/square/sharkey/pkg/server/config"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -78,29 +76,18 @@ func readPubkey(r *http.Request) (ssh.PublicKey, error) {
 	return pubkey, err
 }
 
-func encodeCert(certificate *ssh.Certificate) (string, error) {
-	certString := base64.StdEncoding.EncodeToString(certificate.Marshal())
-	return fmt.Sprintf("%s-cert-v01@openssh.com %s\n", certificate.Key.Type(), certString), nil
-}
-
 func (c *Api) EnrollHost(hostname string, r *http.Request) (string, error) {
 	pubkey, err := readPubkey(r)
 	if err != nil {
 		return "", err
 	}
 
-	// Update table with host
-	id, err := c.storage.RecordIssuance(ssh.HostCert, hostname, pubkey)
+	signedCert, err := c.signHost(hostname, pubkey)
 	if err != nil {
 		return "", err
 	}
 
-	signedCert, err := c.signHost(hostname, id, pubkey)
-	if err != nil {
-		return "", err
-	}
-
-	return encodeCert(signedCert)
+	return cert.EncodeCert(signedCert)
 }
 
 func clientAuthenticated(r *http.Request) bool {
@@ -116,7 +103,7 @@ func clientHostnameMatches(hostname string, r *http.Request) bool {
 	return cert.VerifyHostname(hostname) == nil
 }
 
-func (c *Api) signHost(hostname string, serial uint64, pubkey ssh.PublicKey) (*ssh.Certificate, error) {
+func (c *Api) signHost(hostname string, pubkey ssh.PublicKey) (*ssh.Certificate, error) {
 	principals := []string{hostname}
 	if c.conf.StripSuffix != "" && strings.HasSuffix(hostname, c.conf.StripSuffix) {
 		principals = append(principals, strings.TrimSuffix(hostname, c.conf.StripSuffix))
@@ -124,51 +111,8 @@ func (c *Api) signHost(hostname string, serial uint64, pubkey ssh.PublicKey) (*s
 	if aliases, ok := c.conf.Aliases[hostname]; ok {
 		principals = append(principals, aliases...)
 	}
-	return c.sign(hostname, principals, serial, ssh.HostCert, pubkey)
-}
 
-func (c *Api) sign(keyId string, principals []string, serial uint64, certType uint32, pubkey ssh.PublicKey) (*ssh.Certificate, error) {
-	nonce := make([]byte, 32)
-	_, err := rand.Read(nonce)
-	if err != nil {
-		return nil, err
-	}
-	startTime := time.Now()
-	duration, err := getDurationForCertType(c.conf, certType)
-	if err != nil {
-		return nil, err
-	}
-	endTime := startTime.Add(duration)
-	template := ssh.Certificate{
-		Nonce:           nonce,
-		Key:             pubkey,
-		Serial:          serial,
-		CertType:        certType,
-		KeyId:           keyId,
-		ValidPrincipals: principals,
-		ValidAfter:      (uint64)(startTime.Unix()),
-		ValidBefore:     (uint64)(endTime.Unix()),
-		Permissions:     getPermissionsForCertType(&c.conf.SSH, certType),
-	}
-
-	if c.conf.GitHub.IncludeUserIdentity {
-		username, err := c.RetrieveGitHubUsername(keyId)
-		if err != nil {
-			c.logger.Error(err)
-		} else if username != "" {
-			// If no error in retrieval and username not empty string then add github extension
-			if template.Extensions == nil {
-				template.Extensions = map[string]string{}
-			}
-			template.Extensions["login@github.com"] = username
-		}
-	}
-
-	err = template.SignCert(rand.Reader, c.signer)
-	if err != nil {
-		return nil, err
-	}
-	return &template, nil
+	return c.signer.Sign(hostname, principals, ssh.HostCert, pubkey, map[string]string{})
 }
 
 // This assumes there's an authenticating proxy which provides the user in a header, configurable.
@@ -208,19 +152,24 @@ func (c *Api) EnrollUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id, err := c.storage.RecordIssuance(ssh.UserCert, user, pk)
+	extensions := map[string]string{}
+	if c.conf.GitHub.IncludeUserIdentity {
+		username, err := c.RetrieveGitHubUsername(user)
+		if err != nil {
+			c.logger.Error(err)
+		} else if username != "" {
+			// If no error in retrieval and username not empty string then add github extension
+			extensions["login@github.com"] = username
+		}
+	}
+
+	certificate, err := c.signer.Sign(user, []string{user}, ssh.UserCert, pk, extensions)
 	if err != nil {
 		logHttpError(r, w, err, http.StatusInternalServerError, c.logger)
 		return
 	}
 
-	certificate, err := c.sign(user, []string{user}, id, ssh.UserCert, pk)
-	if err != nil {
-		logHttpError(r, w, err, http.StatusInternalServerError, c.logger)
-		return
-	}
-
-	certString, err := encodeCert(certificate)
+	certString, err := cert.EncodeCert(certificate)
 	if err != nil {
 		logHttpError(r, w, err, http.StatusInternalServerError, c.logger)
 		return
@@ -234,33 +183,4 @@ func (c *Api) EnrollUser(w http.ResponseWriter, r *http.Request) {
 		"Public Key": encodedPublicKey,
 		"user":       user,
 	}).Println("call EnrollUser")
-}
-
-func getDurationForCertType(cfg *config.Config, certType uint32) (time.Duration, error) {
-	var duration time.Duration
-	var err error
-
-	switch certType {
-	case ssh.HostCert:
-		duration, err = time.ParseDuration(cfg.HostCertDuration)
-	case ssh.UserCert:
-		duration, err = time.ParseDuration(cfg.UserCertDuration)
-	default:
-		err = fmt.Errorf("unknown cert type %d", certType)
-	}
-
-	return duration, err
-}
-
-func getPermissionsForCertType(cfg *config.SSH, certType uint32) (perms ssh.Permissions) {
-	switch certType {
-	case ssh.UserCert:
-		if cfg != nil && len(cfg.UserCertExtensions) > 0 {
-			perms.Extensions = make(map[string]string, len(cfg.UserCertExtensions))
-			for _, ext := range cfg.UserCertExtensions {
-				perms.Extensions[ext] = ""
-			}
-		}
-	}
-	return
 }

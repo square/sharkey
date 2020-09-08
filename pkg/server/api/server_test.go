@@ -32,6 +32,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/sirupsen/logrus"
 	"github.com/sirupsen/logrus/hooks/test"
+	"github.com/square/sharkey/pkg/server/cert"
 	"github.com/square/sharkey/pkg/server/config"
 	"github.com/square/sharkey/pkg/server/storage"
 	"github.com/stretchr/testify/assert"
@@ -70,9 +71,9 @@ func TestSignHost(t *testing.T) {
 	pubkey, _, _, _, err := ssh.ParseAuthorizedKey(data)
 	require.NoError(t, err)
 
-	cert, err := c.signHost("hostname.square", 42, pubkey)
+	cert, err := c.signHost("hostname.square", pubkey)
 	require.NoError(t, err, "SignHost method returned an error")
-	require.Equal(t, uint64(42), cert.Serial, "Incorrect cert serial number")
+	require.Equal(t, uint64(1), cert.Serial, "Incorrect cert serial number")
 	require.Equal(t, "hostname.square", cert.KeyId, "Cert pubkey doesn't match")
 	require.Equal(t, pubkey, cert.Key, "Cert pubkey doesn't match")
 	require.Contains(t, cert.ValidPrincipals, "hostname.square")
@@ -296,9 +297,6 @@ func generateContext(t *testing.T) (*Api, error) {
 	key, err := ioutil.ReadFile(conf.SigningKey)
 	require.NoError(t, err)
 
-	signer, err := ssh.ParsePrivateKey(key)
-	require.NoError(t, err)
-
 	logger := logrus.New()
 
 	// in-memory sqlite: see https://github.com/mattn/go-sqlite3 for address docs
@@ -306,6 +304,11 @@ func generateContext(t *testing.T) (*Api, error) {
 	require.NoError(t, err)
 	err = sqlite.Migrate("../../../db/sqlite/migrations")
 	require.NoError(t, err)
+
+	sshSigner, err := ssh.ParsePrivateKey(key)
+	require.NoError(t, err)
+
+	signer := cert.NewSigner(sshSigner, conf, sqlite)
 
 	c := &Api{
 		signer:  signer,
