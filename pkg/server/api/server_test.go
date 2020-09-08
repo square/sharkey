@@ -32,7 +32,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/sirupsen/logrus"
 	"github.com/sirupsen/logrus/hooks/test"
-	"github.com/square/sharkey/pkg/common/sign"
+	"github.com/square/sharkey/pkg/server/cert"
 	"github.com/square/sharkey/pkg/server/config"
 	"github.com/square/sharkey/pkg/server/storage"
 	"github.com/stretchr/testify/assert"
@@ -308,7 +308,7 @@ func generateContext(t *testing.T) (*Api, error) {
 	sshSigner, err := ssh.ParsePrivateKey(key)
 	require.NoError(t, err)
 
-	signer := sign.NewSigner(sshSigner, conf, sqlite)
+	signer := cert.NewSigner(sshSigner, conf, sqlite)
 
 	c := &Api{
 		signer:  signer,

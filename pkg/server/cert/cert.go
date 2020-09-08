@@ -1,4 +1,4 @@
-package sign
+package cert
 
 import (
 	"crypto/rand"
@@ -17,8 +17,8 @@ type Signer struct {
 	storage storage.Storage
 }
 
-func NewSigner(signer ssh.Signer, conf *config.Config, storage storage.Storage) Signer {
-	return Signer{
+func NewSigner(signer ssh.Signer, conf *config.Config, storage storage.Storage) *Signer {
+	return &Signer{
 		signer:  signer,
 		conf:    conf,
 		storage: storage,

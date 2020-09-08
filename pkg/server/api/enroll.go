@@ -26,7 +26,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
-	"github.com/square/sharkey/pkg/common/sign"
+	"github.com/square/sharkey/pkg/server/cert"
 	"github.com/square/sharkey/pkg/server/config"
 	"golang.org/x/crypto/ssh"
 )
@@ -87,7 +87,7 @@ func (c *Api) EnrollHost(hostname string, r *http.Request) (string, error) {
 		return "", err
 	}
 
-	return sign.EncodeCert(signedCert)
+	return cert.EncodeCert(signedCert)
 }
 
 func clientAuthenticated(r *http.Request) bool {
@@ -169,7 +169,7 @@ func (c *Api) EnrollUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	certString, err := sign.EncodeCert(certificate)
+	certString, err := cert.EncodeCert(certificate)
 	if err != nil {
 		logHttpError(r, w, err, http.StatusInternalServerError, c.logger)
 		return

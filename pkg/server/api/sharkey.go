@@ -18,7 +18,7 @@ package api
 
 import (
 	"encoding/json"
-	"github.com/square/sharkey/pkg/common/sign"
+	"github.com/square/sharkey/pkg/server/cert"
 	"io/ioutil"
 	"net/http"
 
@@ -41,7 +41,7 @@ type statusResponse struct {
 }
 
 type Api struct {
-	signer       sign.Signer
+	signer       *cert.Signer
 	storage      storage.Storage
 	conf         *config.Config
 	logger       *logrus.Logger
@@ -67,7 +67,7 @@ func Run(conf *config.Config, logger *logrus.Logger) {
 		logger.WithError(err).Fatal("unable to parse signing key data")
 	}
 
-	signer := sign.NewSigner(sshSigner, conf, storage)
+	signer := cert.NewSigner(sshSigner, conf, storage)
 
 	c := Api{
 		conf:    conf,
