@@ -29,9 +29,15 @@ type Telemetry struct {
 }
 
 func CreateTelemetry(addr string) (*Telemetry, error) {
-	sink, err := datadog.NewDogStatsdSink(addr, "")
-	if err != nil {
-		return nil, err
+	var sink metrics.MetricSink
+	if addr == "" {
+		sink = &metrics.BlackholeSink{}
+	} else {
+		var err error
+		sink, err = datadog.NewDogStatsdSink(addr, "")
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	metricsImpl, err := metrics.New(metrics.DefaultConfig(Service), sink)
