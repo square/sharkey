@@ -76,13 +76,14 @@ func Run(conf *config.Config, logger *logrus.Logger) {
 		logger:  logger,
 	}
 
-	if c.conf.Telemetry.Address != "" {
-		telemetry, err := telemetry.CreateTelemetry(c.conf.Telemetry.Address)
-		if err != nil {
-			logger.WithError(err).Fatal("unable to setup telemetry")
-		}
-		c.telemetry = telemetry
+	if c.conf.Telemetry.Address == "" {
+		logger.Warn("Telemetry address not found, using blackhole metrics sink")
 	}
+	telemetryImpl, err := telemetry.CreateTelemetry(c.conf.Telemetry.Address)
+	if err != nil {
+		logger.WithError(err).Fatal("unable to setup telemetry")
+	}
+	c.telemetry = telemetryImpl
 
 	handler := mux.NewRouter()
 	handler.Path("/enroll/{hostname}").Methods("POST").HandlerFunc(c.Enroll)
