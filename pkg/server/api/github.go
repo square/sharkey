@@ -124,6 +124,8 @@ func (c *Api) updateUserMappings() {
 
 	if err := c.storage.RecordGitHubMapping(mapping); err != nil {
 		c.logger.Errorf("unable to record github mapping: %s", err)
+	} else {
+		c.telemetry.Metrics.IncrCounter([]string{telemetry.GitHub, telemetry.SyncJob, telemetry.Success}, 1)
 	}
 	c.telemetry.Metrics.SetGauge(
 		[]string{telemetry.GitHub, telemetry.SyncJob, telemetry.Latency},
