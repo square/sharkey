@@ -22,6 +22,7 @@ const (
 	Calls   = "calls"
 	Latency = "latency"
 	Count   = "count"
+	Success = "success"
 )
 
 type Telemetry struct {
