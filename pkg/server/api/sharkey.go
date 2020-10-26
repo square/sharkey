@@ -85,7 +85,10 @@ func Run(conf *config.Config, logger *logrus.Logger) {
 	}
 	c.telemetry = telemetryImpl
 
+	metricsMiddlware := telemetry.NewMetricsMiddleware(c.telemetry)
+
 	handler := mux.NewRouter()
+	handler.Use(metricsMiddlware.InstrumentHTTPEndpointStats)
 	handler.Path("/enroll/{hostname}").Methods("POST").HandlerFunc(c.Enroll)
 	handler.Path("/enroll_user").Methods("POST").HandlerFunc(c.EnrollUser)
 	handler.Path("/known_hosts").Methods("GET").HandlerFunc(c.KnownHosts)
