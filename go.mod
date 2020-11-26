@@ -27,7 +27,7 @@ require (
 	golang.org/x/net v0.0.0-20200707034311-ab3426394381 // indirect
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d // indirect
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
-	gopkg.in/yaml.v2 v2.3.0
+	gopkg.in/yaml.v2 v2.4.0
 )
 
 go 1.13
