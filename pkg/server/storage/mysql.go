@@ -57,24 +57,35 @@ func (my *MysqlStorage) QueryHostkeys() (ResultIterator, error) {
 
 func (my *MysqlStorage) RecordGitHubMapping(mapping map[string]string) error {
 	// Prepare for batch insert
-	entries := make([]string, 0, len(mapping))
-	values := make([]interface{}, 0, len(mapping)*2)
+	insertEntries := make([]string, 0, len(mapping))
+	insertValues := make([]interface{}, 0, len(mapping)*2)
+	deleteEntries := make([]string, 0, len(mapping))
+	deleteValues := make([]interface{}, 0, len(mapping))
 	for ssoIdentity, githubUser := range mapping {
 		// Create one set of values for each mapping
-		entries = append(entries, "(?, ?)")
+		insertEntries = append(insertEntries, "(?, ?)")
 		// Append matching values for mapping
-		values = append(values, ssoIdentity)
-		values = append(values, githubUser)
+		insertValues = append(insertValues, ssoIdentity)
+		insertValues = append(insertValues, githubUser)
+
+		deleteEntries = append(deleteEntries, "?")
+		deleteValues = append(deleteValues, ssoIdentity)
 	}
-	// Create query with necessary number of (?, ?) values
-	// Note: The use of VALUES in VALUES(github_username) will be deprecated in MYSQL 8.0.20
-	// https://dev.mysql.com/doc/refman/8.0/en/insert-on-duplicate.html
-	stmt := fmt.Sprintf(
-		"INSERT INTO github_user_mappings (sso_identity, github_username) VALUES %s ON DUPLICATE KEY UPDATE github_username=VALUES(github_username)",
-		strings.Join(entries, ","))
-	// Execute with blown up values that match into the (?, ?) blocks inserted into the statement
-	_, err := my.DB.Exec(stmt, values...)
+
+	// Delete if not found in GitHub results
+	deleteStmt := fmt.Sprintf(
+		"DELETE FROM github_user_mappings WHERE sso_identity NOT IN (%s)",
+		strings.Join(deleteEntries, ","))
+	_, err := my.DB.Exec(deleteStmt, deleteValues...)
 	if err != nil {
+		return fmt.Errorf("error deleting mappings: %s", err.Error())
+	}
+
+	insertStmt := fmt.Sprintf(
+		"REPLACE INTO github_user_mappings (sso_identity, github_username) VALUES %s",
+		strings.Join(insertEntries, ","))
+	// Execute with blown up values that match into the (?, ?) blocks inserted into the statement
+	if _, err := my.DB.Exec(insertStmt, insertValues...); err != nil {
 		return fmt.Errorf("error recording mapping: %s", err.Error())
 	}
 

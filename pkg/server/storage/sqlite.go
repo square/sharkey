@@ -53,22 +53,36 @@ func (s *SqliteStorage) QueryHostkeys() (ResultIterator, error) {
 
 func (s *SqliteStorage) RecordGitHubMapping(mapping map[string]string) error {
 	// Prepare for batch insert
-	entries := make([]string, 0, len(mapping))
-	values := make([]interface{}, 0, len(mapping)*2)
+	insertEntries := make([]string, 0, len(mapping))
+	insertValues := make([]interface{}, 0, len(mapping)*2)
+	deleteEntries := make([]string, 0, len(mapping))
+	deleteValues := make([]interface{}, 0, len(mapping))
 	for ssoIdentity, githubUser := range mapping {
 		// Create one set of values for each mapping
-		entries = append(entries, "(?, ?)")
+		insertEntries = append(insertEntries, "(?, ?)")
 		// Append matching values for mapping
-		values = append(values, ssoIdentity)
-		values = append(values, githubUser)
+		insertValues = append(insertValues, ssoIdentity)
+		insertValues = append(insertValues, githubUser)
+
+		deleteEntries = append(deleteEntries, "?")
+		deleteValues = append(deleteValues, ssoIdentity)
 	}
+
+	// Delete if not found in GitHub results
+	deleteStmt := fmt.Sprintf(
+		"DELETE FROM github_user_mappings WHERE sso_identity NOT IN (%s)",
+		strings.Join(deleteEntries, ","))
+	_, err := s.DB.Exec(deleteStmt, deleteValues...)
+	if err != nil {
+		return fmt.Errorf("error deleting mappings: %s", err.Error())
+	}
+
 	// Create query with necessary number of (?, ?) values
 	stmt := fmt.Sprintf(
 		"INSERT OR REPLACE INTO github_user_mappings (sso_identity, github_username) VALUES %s",
-		strings.Join(entries, ","))
+		strings.Join(insertEntries, ","))
 	// Execute with blown up values that match into the (?, ?) blocks inserted into the statement
-	_, err := s.DB.Exec(stmt, values...)
-	if err != nil {
+	if _, err := s.DB.Exec(stmt, insertValues...); err != nil {
 		return fmt.Errorf("error recording mapping: %s", err.Error())
 	}
 
