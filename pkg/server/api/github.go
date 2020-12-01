@@ -3,9 +3,10 @@ package api
 import (
 	"context"
 	"fmt"
-	"github.com/square/sharkey/pkg/server/telemetry"
 	"net/http"
 	"time"
+
+	"github.com/square/sharkey/pkg/server/telemetry"
 
 	"github.com/bradleyfalzon/ghinstallation"
 	"github.com/robfig/cron/v3"
