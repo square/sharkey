@@ -3,7 +3,7 @@ module github.com/square/sharkey
 require (
 	bitbucket.org/liamstask/goose v0.0.0-20150115234039-8488cc47d90c
 	github.com/PuerkitoBio/goquery v1.5.1 // indirect
-	github.com/armon/go-metrics v0.3.4
+	github.com/armon/go-metrics v0.3.6
 	github.com/bradleyfalzon/ghinstallation v1.1.1
 	github.com/felixge/httpsnoop v1.0.1
 	github.com/go-sql-driver/mysql v1.5.0
