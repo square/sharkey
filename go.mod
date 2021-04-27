@@ -5,7 +5,7 @@ require (
 	github.com/PuerkitoBio/goquery v1.5.1 // indirect
 	github.com/armon/go-metrics v0.3.4
 	github.com/bradleyfalzon/ghinstallation v1.1.1
-	github.com/felixge/httpsnoop v1.0.1
+	github.com/felixge/httpsnoop v1.0.2
 	github.com/go-sql-driver/mysql v1.5.0
 	github.com/google/go-github/v29 v29.0.3 // indirect
 	github.com/gorilla/handlers v1.5.1
