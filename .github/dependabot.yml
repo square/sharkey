@@ -1,0 +1,15 @@
+version: 2
+updates:
+- package-ecosystem: gomod
+  directory: "/"
+  schedule:
+    interval: daily
+  open-pull-requests-limit: 10
+  ignore:
+  - dependency-name: github.com/sirupsen/logrus
+    versions:
+    - 1.7.1
+    - 1.8.0
+  - dependency-name: github.com/armon/go-metrics
+    versions:
+    - 0.3.6
