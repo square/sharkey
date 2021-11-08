@@ -8,7 +8,7 @@ import (
 
 	"github.com/square/sharkey/pkg/server/telemetry"
 
-	"github.com/bradleyfalzon/ghinstallation"
+	"github.com/bradleyfalzon/ghinstallation/v2"
 	"github.com/robfig/cron/v3"
 	"github.com/shurcooL/githubv4"
 )
