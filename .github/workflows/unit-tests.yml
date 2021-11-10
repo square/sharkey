@@ -25,6 +25,7 @@ jobs:
       uses: mirromutth/mysql-action@v1.1
       with:
         mysql database: 'sharkey_test'
+        mysql user: 'root'
 
     - name: Test
       run: go test -v ./...
