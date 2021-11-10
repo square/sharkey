@@ -37,6 +37,7 @@ func TestMysql(t *testing.T) {
 		Type:     "mysql",
 		Schema:   "sharkey_test",
 		Username: "root",
+		Password: "root",
 	}
 
 	storage, err := NewMysql(cfg)
