@@ -22,9 +22,9 @@ jobs:
       run: go build -v ./...
 
     - name: Set up MySQL
-      run: |
-        sudo /etc/init.d/mysql start
-        mysql -e 'CREATE DATABASE sharkey_test;' -u root
+      uses: mirromutth/mysql-action@v1.1
+      with:
+        mysql database: 'sharkey_test'
 
     - name: Test
       run: go test -v ./...
