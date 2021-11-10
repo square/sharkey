@@ -23,7 +23,7 @@ func purge(t *testing.T, db *sql.DB) {
 
 // TestMysql verifies the MySQL storage interface is respected.
 // Because it requires a running MySQL database, you can skip it with `go test -short`
-// It expects a Mysql running on localhost:3306 with the username root and a database
+// It expects a Mysql running on localhost:3306 with the username root, password 'root', and a database
 // named sharkey_test, as our CI environment provides.  That database will have its tables dropped.
 // Don't run tests in prod, and don't call your prod DB sharkey_test.
 func TestMysql(t *testing.T) {
@@ -37,6 +37,7 @@ func TestMysql(t *testing.T) {
 		Type:     "mysql",
 		Schema:   "sharkey_test",
 		Username: "root",
+		Password: "root",
 	}
 
 	storage, err := NewMysql(cfg)
