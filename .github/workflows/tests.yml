@@ -30,10 +30,11 @@ jobs:
     - name: Go Test
       run: go test -v ./...
 
-    - name: Build Containers
-      run: |
-        docker build -t server:latest -f Dockerfile .
-        docker build -t client:latest -f DockerfileClientTest .
+    - name: Build Server Container
+      run: docker build -t server:latest -f Dockerfile .
+
+    - name: Build Client Container
+      run: docker build -t client:latest -f DockerfileClientTest .
 
     - name: Integration Test
       run: ./integration-test.sh
