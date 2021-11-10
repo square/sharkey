@@ -33,7 +33,7 @@ jobs:
     - name: Build Containers
       run: |
         docker build -t server:latest -f Dockerfile .
-        docer build -t client:latest -f DocerfileClientTest .
+        docker build -t client:latest -f DocerfileClientTest .
 
     - name: Integration Test
       run: ./integration-test.sh
