@@ -24,7 +24,7 @@ jobs:
     - name: Set up MySQL
       run: |
         sudo /etc/init.d/mysql start
-        mysql -e 'CREATE DATABASE sharkey_test;'
+        mysql -e 'CREATE DATABASE sharkey_test;' -u root
 
     - name: Test
       run: go test -v ./...
