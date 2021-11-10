@@ -1,0 +1,39 @@
+name: Tests
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up MySQL
+      uses: mirromutth/mysql-action@v1.1
+      with:
+        mysql database: 'sharkey_test'
+        mysql root password: 'root'
+
+    - name: Set up Go
+      uses: actions/setup-go@v2
+      with:
+        go-version: 1.17
+
+    - name: Go Build
+      run: go build -v ./...
+
+    - name: Go Test
+      run: go test -v ./...
+
+    - name: Build Containers
+      run: |
+        docker build -t server:latest -f Dockerfile .
+        docer build -t client:latest -f DocerfileClientTest .
+
+    - name: Integration Test
+      run: ./integration-test.sh
