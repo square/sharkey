@@ -17,6 +17,7 @@
 package api
 
 import (
+	"bytes"
 	"net/http"
 
 	"golang.org/x/crypto/ssh"
@@ -28,6 +29,15 @@ func (c *Api) Authority(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, _ = w.Write([]byte("@cert-authority * "))
-	_, _ = w.Write(ssh.MarshalAuthorizedKey(c.signer.PublicKey()))
+	var buffer bytes.Buffer
+	for _, entry := range c.conf.ExtraAuthorities {
+		buffer.WriteString("@cert-authority * ")
+		buffer.WriteString(entry)
+		buffer.WriteRune('\n')
+	}
+
+	buffer.WriteString("@cert-authority * ")
+	buffer.Write(ssh.MarshalAuthorizedKey(c.signer.PublicKey()))
+
+	_, _ = w.Write(buffer.Bytes())
 }

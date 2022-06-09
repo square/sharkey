@@ -238,6 +238,33 @@ func TestGetAuthority(t *testing.T) {
 		"Request body from /authority unexpectedly returned '%s'", string(body))
 }
 
+func TestGetAuthorityWithExtraCAs(t *testing.T) {
+	c, err := generateContext(t)
+	require.NoError(t, err)
+	c = addExtraAuthorities(t, c)
+
+	req, err := generateHostRequest()
+	require.NoError(t, err, "Error reading test ssh key")
+
+	rec := httptest.NewRecorder()
+	c.Authority(rec, req)
+
+	rec.Flush()
+	require.Equalf(t, 200, rec.Code, "Request to /authority failed with %d", rec.Code)
+
+	body, _ := ioutil.ReadAll(rec.Body)
+	receivedCAs := strings.Split(string(body), "\n")
+	expectedCA1Bytes, err := ioutil.ReadFile("testdata/server_ca.pub")
+	require.NoError(t, err, "Error reading testdata")
+	expectedCA1 := fmt.Sprintf("@cert-authority * %s", strings.Trim(string(expectedCA1Bytes), "\n"))
+	expectedCA2Bytes, err := ioutil.ReadFile("testdata/next_server_ca.pub")
+	require.NoError(t, err, "Error reading testdata")
+	expectedCA2 := fmt.Sprintf("@cert-authority * %s", strings.Trim(string(expectedCA2Bytes), "\n"))
+
+	require.Containsf(t, receivedCAs, string(expectedCA1), "Request body from /authority unexpectedly returned '%s', which didn't contain '%s'", string(body), expectedCA1)
+	require.Containsf(t, receivedCAs, string(expectedCA2), "Request body from /authority unexpectedly returned '%s', which didn't contain '%s'", string(body), expectedCA2)
+}
+
 func TestGetKnownHosts(t *testing.T) {
 	c, err := generateContext(t)
 	require.NoError(t, err)
@@ -318,6 +345,13 @@ func generateContext(t *testing.T) (*Api, error) {
 	}
 
 	return c, nil
+}
+
+func addExtraAuthorities(t *testing.T, a *Api) *Api {
+	extraCABytes, err := ioutil.ReadFile("testdata/next_server_ca.pub")
+	require.NoError(t, err, "Error reading testdata")
+	a.conf.ExtraAuthorities = []string{(string(extraCABytes))}
+	return a
 }
 
 func generateRequest(hostname string, body io.ReadCloser) (*http.Request, error) {
