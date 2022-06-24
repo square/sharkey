@@ -17,7 +17,7 @@ require (
 	github.com/shurcooL/githubv4 v0.0.0-20200627185320-e003124d66e4
 	github.com/shurcooL/graphql v0.0.0-20181231061246-d48a9a75455f // indirect
 	github.com/sirupsen/logrus v1.7.0
-	github.com/stretchr/testify v1.7.2
+	github.com/stretchr/testify v1.7.5
 	github.com/ziutek/mymysql v0.0.0-20160623123511-8787d5581eb6 // indirect
 	golang.org/x/crypto v0.0.0-20210817164053-32db794688a5
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d // indirect
