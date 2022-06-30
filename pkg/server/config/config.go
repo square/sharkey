@@ -31,6 +31,7 @@ type Config struct {
 	ListenAddr          string               `yaml:"listen_addr"`
 	StripSuffix         string               `yaml:"strip_suffix"`
 	Aliases             map[string][]string  `yaml:"aliases"`
+	ExtraAuthorities    []string             `yaml:"extra_authorities"`
 	ExtraKnownHosts     []string             `yaml:"extra_known_hosts"`
 	AuthenticatingProxy *AuthenticatingProxy `yaml:"auth_proxy"`
 	SSH                 SSH                  `yaml:"ssh"`
