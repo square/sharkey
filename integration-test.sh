@@ -13,7 +13,7 @@ function die() {
 
 function wait_for_container() {
   echo "Waiting for $1..."
-  for i in range 0 15; do
+  for i in range 0 20; do
     if docker ps | grep -q "$1"; then
       return
     fi
@@ -26,11 +26,9 @@ function cleanup() {
   echo "Cleanup..."
   docker logs server
   docker logs client
-  docker stop server
-  docker stop client
-  docker rm server
-  docker rm client
-  rm -r "$TMPDIR"
+  docker stop client -t 20  || die "failed to stop 'client'"
+  docker stop server -t 20  || die "failed to stop 'server'"
+  rm -r "$TMPDIR"  || die "failed to remove '$TMPDIR'"
 }
 
 trap cleanup EXIT
@@ -43,7 +41,7 @@ CLIENT_CONFIG="${BUILD_CONTEXT}/test/integration/client_config.yaml"
 echo Starting sharkey server container
 
 # Start server
-docker run -d \
+docker run -d --rm \
 	--name=server \
 	-v "$PWD":"$BUILD_CONTEXT" \
 	-e SHARKEY_CONFIG="$SERVER_CONFIG" \
@@ -56,7 +54,7 @@ wait_for_container server
 echo Starting sharkey client container
 
 # Start client
-docker run -d \
+docker run -d --rm \
 	--name client \
 	-v "$PWD":"$BUILD_CONTEXT" \
 	-e SHARKEY_CONFIG="$CLIENT_CONFIG" \
@@ -94,5 +92,5 @@ if ! grep -q "127.0.0.1 client" /etc/hosts; then
 fi
 
 echo Attempting to ssh into client container
-ssh -p 14296 -o "BatchMode yes" -o "UserKnownHostsFile=test/integration/known_hosts" -i $TMPDIR/alice_rsa alice@client true || die "failed to connect to 'client'"
-ssh -p 14296 -o "BatchMode yes" -o "UserKnownHostsFile=test/integration/known_hosts" -i $TMPDIR/alice_rsa alice@localhost true || die "failed to connect to 'localhost'"
+ssh -v -p 14296 -o "BatchMode yes" -o "UserKnownHostsFile=test/integration/known_hosts" -i $TMPDIR/alice_rsa alice@client true || die "failed to connect to 'client'"
+ssh -v -p 14296 -o "BatchMode yes" -o "UserKnownHostsFile=test/integration/known_hosts" -i $TMPDIR/alice_rsa alice@localhost true || die "failed to connect to 'localhost'"

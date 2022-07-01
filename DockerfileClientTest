@@ -1,9 +1,7 @@
 # Dockerfile for integration testing
 #
 # Not intended to be used for an actual setup
-FROM golang
-
-MAINTAINER Matthew McPherrin "mmc@squareup.com"
+FROM golang:1.18
 
 RUN apt-get update && apt-get install -y openssh-server
 RUN mkdir /var/run/sshd
@@ -19,11 +17,19 @@ RUN echo "export VISIBLE=now" >> /etc/profile
 # Setup user cert based ssh
 ADD test/keys/server_ca.pub /etc/ssh/ca_user_key.pub
 
-COPY . /go/src/github.com/square/sharkey
+WORKDIR /app
 
-ENV GO111MODULE=on
-RUN cd /go/src/github.com/square/sharkey && \
-	go build -v -o /usr/bin/sharkey-client ./cmd/sharkey-client && \
+COPY go.mod .
+COPY go.sum .
+
+# Download dependencies
+RUN go mod download
+
+# Copy source
+COPY . .
+
+# Build & set-up
+RUN go build -buildvcs=false -o /usr/bin/sharkey-client github.com/square/sharkey/cmd/sharkey-client && \
     cp test/integration/client_entry.sh /usr/bin/entrypoint.sh && \
     chmod +x /usr/bin/entrypoint.sh
 

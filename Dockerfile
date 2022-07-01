@@ -9,24 +9,33 @@
 # This image only contains the server component of sharkey,
 # the client will have to be deployed separately
 
-FROM golang:alpine
-
-MAINTAINER Matthew McPherrin "mmc@squareup.com"
+FROM golang:1.18-alpine as build
 
 # Install CGO deps
-RUN apk add --update git mercurial gcc musl-dev && \
+RUN apk add --update gcc musl-dev && \
     rm -rf /var/cache/apk/*
 
-ENV GO111MODULE=on
+WORKDIR /app
+
+COPY go.mod .
+COPY go.sum .
+
+# Download dependencies
+RUN go mod download
 
 # Copy source
-COPY . /go/src/github.com/square/sharkey
+COPY . .
 
-# Build & cleanup
-RUN cd /go/src/github.com/square/sharkey && \
-    cp docker.sh /usr/bin/entrypoint.sh && \
+# Build & set-up
+RUN cp docker.sh /usr/bin/entrypoint.sh && \
     chmod +x /usr/bin/entrypoint.sh && \
-    go build -v -o /usr/bin/sharkey-server ./cmd/sharkey-server && \
-    rm -rf /go/src/*
+    go build -buildvcs=false -o /usr/bin/sharkey-server github.com/square/sharkey/cmd/sharkey-server
+
+
+# Create a multi-stage build with the binary
+FROM golang:1.18-alpine
+
+COPY --from=build /usr/bin/sharkey-server /usr/bin/sharkey-server
+COPY --from=build /usr/bin/entrypoint.sh /usr/bin/entrypoint.sh
 
 ENTRYPOINT ["/usr/bin/entrypoint.sh"]
