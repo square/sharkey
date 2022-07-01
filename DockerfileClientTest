@@ -3,8 +3,6 @@
 # Not intended to be used for an actual setup
 FROM golang:1.18
 
-MAINTAINER Matthew McPherrin "mmc@squareup.com"
-
 RUN apt-get update && apt-get install -y openssh-server
 RUN mkdir /var/run/sshd
 RUN echo 'root:password' | chpasswd

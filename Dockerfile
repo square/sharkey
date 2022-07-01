@@ -11,8 +11,6 @@
 
 FROM golang:1.18-alpine as build
 
-MAINTAINER Matthew McPherrin "mmc@squareup.com"
-
 # Install CGO deps
 RUN apk add --update gcc musl-dev && \
     rm -rf /var/cache/apk/*
