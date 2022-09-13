@@ -36,7 +36,7 @@ function cleanup() {
 }
 
 function start_server() {
-  MSYS_NO_PATHCONV=1 docker run -d --rm \
+docker run -d --rm \
 	--name=$1 \
 	-v "$PWD":"$BUILD_CONTEXT" \
 	-e SHARKEY_CONFIG=$2 \
@@ -87,7 +87,7 @@ start_server server $SERVER_CONFIG 12321 server
 echo Starting sharkey client container
 
 # Start client
-MSYS_NO_PATHCONV=1 docker run -d --rm \
+docker run -d --rm \
 	--name client \
 	-v "$PWD":"$BUILD_CONTEXT" \
 	-e SHARKEY_CONFIG="$CLIENT_CONFIG" \
