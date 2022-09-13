@@ -17,10 +17,16 @@
 package api
 
 import (
+	"crypto"
+	"crypto/x509"
 	"encoding/json"
-	"github.com/square/sharkey/pkg/server/cert"
+	"encoding/pem"
+	"fmt"
 	"io/ioutil"
 	"net/http"
+
+	"github.com/letsencrypt/pkcs11key/v4"
+	"github.com/square/sharkey/pkg/server/cert"
 
 	_ "bitbucket.org/liamstask/goose/lib/goose"
 	"github.com/gorilla/handlers"
@@ -51,18 +57,37 @@ type Api struct {
 
 func Run(conf *config.Config, logger *logrus.Logger) {
 	logger.Print("Starting http server")
-	privateKey, err := ioutil.ReadFile(conf.SigningKey)
-	if err != nil {
-		logger.WithError(err).Fatal("unable to read signing key file")
-	}
-
 	storage, err := storage.FromConfig(conf.Database)
 	if err != nil {
 		logger.WithError(err).Fatal("unable to setup database")
 	}
 	defer storage.Close()
 
-	sshSigner, err := ssh.ParsePrivateKey(privateKey)
+	var sshSigner ssh.Signer
+	if conf.PKCS11.LibPath != "" && conf.PKCS11.PinPath != "" && conf.PKCS11.TokenLabel != "" && conf.PKCS11.PubKeyPath != "" {
+		pubKey, err := getPubKeyFromFile(conf.PKCS11.PubKeyPath)
+		if err != nil {
+			logger.WithError(err).Fatal("error retrieving public key from file:", err)
+		}
+		p11Pin, err := ioutil.ReadFile(conf.PKCS11.PinPath)
+		if err != nil {
+			logger.WithError(err).Fatal("unable to read signing key file")
+		}
+		p11key, err := pkcs11key.New(conf.PKCS11.LibPath, conf.PKCS11.TokenLabel, string(p11Pin), pubKey)
+		if err != nil {
+			logger.WithError(err).Fatal("error creating pkcs11 key object:", err)
+		}
+		sshSigner, err = ssh.NewSignerFromSigner(p11key)
+		if err != nil {
+			logger.WithError(err).Fatal("error creating ssh signer backed by pkcs11 key:", err)
+		}
+	} else {
+		privateKey, err := ioutil.ReadFile(conf.SigningKey)
+		if err != nil {
+			logger.WithError(err).Fatal("unable to read signing key file")
+		}
+		sshSigner, err = ssh.ParsePrivateKey(privateKey)
+	}
 	if err != nil {
 		logger.WithError(err).Fatal("unable to parse signing key data")
 	}
@@ -149,4 +174,21 @@ func (c *Api) Status(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusServiceUnavailable)
 	}
 	_, _ = w.Write(out)
+}
+
+func getPubKeyFromFile(filepath string) (crypto.PublicKey, error) {
+	pubPEM, err := ioutil.ReadFile(filepath)
+	if err != nil {
+		return nil, fmt.Errorf("error reading public key from file: %s", err)
+	}
+	block, _ := pem.Decode([]byte(pubPEM))
+	if block == nil {
+		return nil, fmt.Errorf("error parsing PEM block containing public key")
+	}
+	pub, err := x509.ParsePKIXPublicKey(block.Bytes)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse DER encoded public key: %s", err)
+	}
+
+	return pub, nil
 }

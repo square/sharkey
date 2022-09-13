@@ -30,6 +30,13 @@ tls:
 # Signing key (from ssh-keygen)
 signing_key: /path/to/ca-signing-key
 
+# Optional PKCS11 configuration. If using PKCS11 key for signing, all values must be specified, otherwise 'signing_key' will be used for signing
+pkcs11:
+  lib: /usr/lib/softhsm/libsofthsm2.so
+  pin_path: /build/test/integration/pkcs11_pin
+  token_label: sharkey-test-token-ec_prime256v1
+  pub_key_path: /sharkey/ca_pub_keys/pkcs11_ec_prime256v1_pub_key.pem
+
 # Lifetime/validity duration for generated host certificates
 host_cert_duration: 168h
 

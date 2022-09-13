@@ -1,0 +1,49 @@
+# Dockerfile for square/sharkey (server).
+#
+# Building:
+#   docker build --rm -t square/sharkey-server .
+#
+# Basic usage:
+#   docker run -e SHARKEY_CONFIG=/path/to/config -e SHARKEY_MIGRATIONS=/path/to/migration/dir square/sharkey-server
+#
+# This image only contains the server component of sharkey,
+# the client will have to be deployed separately
+
+FROM golang:1.18-alpine as build
+
+# Install CGO deps
+RUN apk add --update gcc musl-dev && \
+    rm -rf /var/cache/apk/*
+
+WORKDIR /app
+
+COPY go.mod .
+COPY go.sum .
+
+# Download dependencies
+RUN go mod download
+
+# Copy source
+COPY . .
+
+# Build & set-up
+RUN cp test/integration/pkcs11_entry.sh /usr/bin/entrypoint.sh && \
+    cp test/integration/softhsm_setup.sh /usr/bin/softhsm_setup.sh && \
+    chmod +x /usr/bin/entrypoint.sh && \
+    chmod +x /usr/bin/softhsm_setup.sh && \
+    go build -buildvcs=false -o /usr/bin/sharkey-server github.com/square/sharkey/cmd/sharkey-server
+
+# Create a multi-stage build with the binary
+FROM golang:1.18-alpine
+
+COPY --from=build /usr/bin/sharkey-server /usr/bin/sharkey-server
+COPY --from=build /usr/bin/entrypoint.sh /usr/bin/entrypoint.sh
+COPY --from=build /usr/bin/softhsm_setup.sh /usr/bin/softhsm_setup.sh
+
+RUN apk update && apk add bash && apk add openssl && apk add curl && \
+    rm -rf /var/cache/apk/*
+RUN mkdir -p /sharkey/ca_pub_keys/
+RUN apk add softhsm && apk add opensc
+RUN /usr/bin/softhsm_setup.sh
+
+ENTRYPOINT ["/usr/bin/entrypoint.sh"]

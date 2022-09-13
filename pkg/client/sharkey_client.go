@@ -256,10 +256,7 @@ func (c *Client) shellOut(command []string) {
 	if c.conf.Sudo != "" {
 		command = append([]string{c.conf.Sudo}, command...)
 	}
-	cmd := exec.Cmd{
-		Path: command[0],
-		Args: command,
-	}
+	cmd := exec.Command(command[0], command[1:]...)
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 	cmd.Stdout = &stdout
