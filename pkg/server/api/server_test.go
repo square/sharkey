@@ -17,12 +17,14 @@
 package api
 
 import (
+	"crypto/ecdsa"
 	"crypto/tls"
 	"crypto/x509"
 	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
+	"math/big"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -306,6 +308,23 @@ func TestStatus(t *testing.T) {
 
 	require.Equalf(t, "application/json", rec.Header().Get("Content-Type"),
 		"Expected Content-Type to be set to 'application/json', but instead got %s", rec.Header().Get("Content-Type"))
+}
+
+func TestGetPubKeyFromFile(t *testing.T) {
+	pub, err := getPubKeyFromFile("testdata/server_ca_prime256v1_pub.pem")
+	require.NoError(t, err)
+
+	expectedPubXComponent := "ffff236e99785f8578b3fe355f71fe14bb88557fcd4c3c0fe9a9f7c67236e518"
+	expectedPubYComponent := "40317d4b903c170336612d041fd6eb78378b6f60bb9538df11b5c3065d7f59ca"
+	expectedX := new(big.Int)
+	expectedY := new(big.Int)
+	expectedX.SetString(expectedPubXComponent, 16)
+	expectedY.SetString(expectedPubYComponent, 16)
+
+	ecpub, ok := pub.(*ecdsa.PublicKey)
+	require.True(t, ok, "Public key isn't a valid ECDSA key")
+	require.Equalf(t, expectedX, ecpub.X, "EC Public key X component unexpectedly parsed as: '%v', expected: '%v'", fmt.Sprintf("%x", ecpub.X), expectedPubXComponent)
+	require.Equalf(t, expectedY, ecpub.Y, "EC Public key Y component unexpectedly parsed as: '%v', expected: '%v'", fmt.Sprintf("%x", ecpub.Y), expectedPubYComponent)
 }
 
 func generateContext(t *testing.T) (*Api, error) {

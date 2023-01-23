@@ -26,6 +26,7 @@ type Config struct {
 	Database            Database             `yaml:"db"`
 	TLS                 TLS                  `yaml:"tls"`
 	SigningKey          string               `yaml:"signing_key"`
+	PKCS11              PKCS11               `yaml:"pkcs11"`
 	HostCertDuration    string               `yaml:"host_cert_duration"`
 	UserCertDuration    string               `yaml:"user_cert_duration"`
 	ListenAddr          string               `yaml:"listen_addr"`
@@ -47,6 +48,13 @@ type TLS struct {
 	CA   string
 	Cert string
 	Key  string
+}
+
+type PKCS11 struct {
+	LibPath    string `yaml:"lib_path"`
+	PinPath    string `yaml:"pin_path"`
+	TokenLabel string `yaml:"token_label"`
+	PubKeyPath string `yaml:"pub_key_path"`
 }
 
 type Database struct {
