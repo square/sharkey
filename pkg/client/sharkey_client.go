@@ -206,6 +206,10 @@ func (c *Client) makeKnownHosts() {
 }
 
 func (c *Client) GenerateClient() error {
+	if c.client != nil {
+		c.client.CloseIdleConnections()
+	}
+
 	tlsConfig, err := buildConfig(c.conf.TLS.Ca)
 	if err != nil {
 		return err
