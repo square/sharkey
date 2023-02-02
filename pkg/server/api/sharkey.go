@@ -18,9 +18,11 @@ package api
 
 import (
 	"encoding/json"
-	"github.com/square/sharkey/pkg/server/cert"
 	"io/ioutil"
 	"net/http"
+	"time"
+
+	"github.com/square/sharkey/pkg/server/cert"
 
 	_ "bitbucket.org/liamstask/goose/lib/goose"
 	"github.com/gorilla/handlers"
@@ -100,9 +102,10 @@ func Run(conf *config.Config, logger *logrus.Logger) {
 		logger.WithError(err).Fatal("issue with BuildTLS")
 	}
 	server := &http.Server{
-		Addr:      conf.ListenAddr,
-		TLSConfig: tlsConfig,
-		Handler:   loggingHandler,
+		Addr:        conf.ListenAddr,
+		TLSConfig:   tlsConfig,
+		Handler:     loggingHandler,
+		IdleTimeout: time.Minute * 5,
 	}
 
 	if c.conf.GitHub.SyncEnabled {
