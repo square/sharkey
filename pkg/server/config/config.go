@@ -61,6 +61,7 @@ type Database struct {
 type AuthenticatingProxy struct {
 	Hostname       string `yaml:"hostname"`
 	UsernameHeader string `yaml:"username_header"`
+	SpiffeId       string `yaml:"spiffe_id"`
 }
 
 type GitHub struct {

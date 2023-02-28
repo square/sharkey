@@ -26,6 +26,8 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
+	"github.com/spiffe/go-spiffe/v2/spiffeid"
+	"github.com/spiffe/go-spiffe/v2/svid/x509svid"
 	"github.com/square/sharkey/pkg/server/cert"
 	"github.com/square/sharkey/pkg/server/config"
 	"golang.org/x/crypto/ssh"
@@ -103,6 +105,33 @@ func clientHostnameMatches(hostname string, r *http.Request) bool {
 	return cert.VerifyHostname(hostname) == nil
 }
 
+func clientSpiffeIdMatches(expected string, r *http.Request) (bool, error) {
+	conn := r.TLS
+	if len(conn.VerifiedChains) == 0 {
+		return false, nil
+	}
+
+	cert := conn.VerifiedChains[0][0]
+
+	// Get the SPIFFE ID from the presented certificate
+	actualId, err := x509svid.IDFromCert(cert)
+	if err != nil {
+		return false, nil
+	}
+
+	// Form a good spiffe ID from the configuration string
+	expectedId, err := spiffeid.FromString(expected)
+	if err != nil {
+		return false, err
+	}
+
+	matcher := spiffeid.MatchID(expectedId)
+
+	validationFailed := matcher(actualId)
+
+	return validationFailed == nil, nil
+}
+
 func (c *Api) signHost(hostname string, pubkey ssh.PublicKey) (*ssh.Certificate, error) {
 	principals := []string{hostname}
 	if c.conf.StripSuffix != "" && strings.HasSuffix(hostname, c.conf.StripSuffix) {
@@ -124,7 +153,26 @@ func proxyAuthenticated(ap *config.AuthenticatingProxy, w http.ResponseWriter, r
 		return "", false
 	}
 
-	if !(clientAuthenticated(r) && clientHostnameMatches(ap.Hostname, r)) {
+	apValidated := false
+
+	// Host name matching
+	if clientAuthenticated(r) && clientHostnameMatches(ap.Hostname, r) {
+		apValidated = true
+	}
+
+	// SPIFFE ID matching
+	spiffeIdMatches, err := clientSpiffeIdMatches(ap.SpiffeId, r)
+	if err != nil {
+		// Do not necessarily fail as other conditions might apply
+		logger.Error("malformed proxy spiffe id")
+	}
+
+	if spiffeIdMatches {
+		apValidated = true
+	}
+
+	// Matching fails case
+	if !(apValidated) {
 		logHttpError(r, w, fmt.Errorf("request didn't come from proxy"), http.StatusUnauthorized, logger)
 		return "", false
 	}
