@@ -19,6 +19,7 @@ package api
 import (
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/pem"
 	"errors"
 	"fmt"
 	"io"
@@ -93,7 +94,7 @@ func TestEnrollHost(t *testing.T) {
 	}
 }
 
-func TestEnrollUser(t *testing.T) {
+func TestEnrollUserNoSpiffeId(t *testing.T) {
 	hostname := "proxy"
 	header := "X-Forwarded-User"
 	c, err := generateContext(t)
@@ -111,6 +112,84 @@ func TestEnrollUser(t *testing.T) {
 		request, err := generateUserRequest(hostname)
 		request.Header.Set(header, "alice")
 		require.NoError(t, err, "Error reading test ssh key")
+
+		rr := httptest.NewRecorder()
+		c.EnrollUser(rr, request)
+
+		assert.Equal(t, 1, len(hook.Entries))
+		assert.Equal(t, logrus.InfoLevel, hook.LastEntry().Level)
+		assert.Equal(t, "call EnrollUser", hook.LastEntry().Message)
+		assert.Contains(t, hook.LastEntry().Data, "Type")
+		assert.Contains(t, hook.LastEntry().Data, "Public Key")
+		assert.Contains(t, hook.LastEntry().Data, "user")
+
+		res := rr.Result()
+		body, err := ioutil.ReadAll(res.Body)
+		fmt.Println(string(body))
+		require.NoError(t, err, "unexpected error reading body")
+		require.Equal(t, 200, res.StatusCode, "failed to enroll user")
+		hook.Reset()
+	}
+}
+
+func TestEnrollUserSpiffeIdNoHostname(t *testing.T) {
+	hostname := "proxy"
+	header := "X-Forwarded-User"
+	c, err := generateContext(t)
+	require.NoError(t, err)
+
+	// set auth proxy
+	c.conf.AuthenticatingProxy = &config.AuthenticatingProxy{
+		Hostname:       hostname,
+		UsernameHeader: header,
+		SpiffeId:       "spiffe://proxy.com",
+	}
+
+	hook := test.NewLocal(c.logger)
+
+	for i := 0; i < 5; i++ {
+		request, err := generateSpiffeUserRequest("")
+		require.NoError(t, err, "Error reading test ssh key or parsing X.509 Certificate")
+		request.Header.Set(header, "alice")
+
+		rr := httptest.NewRecorder()
+		c.EnrollUser(rr, request)
+
+		assert.Equal(t, 1, len(hook.Entries))
+		assert.Equal(t, logrus.InfoLevel, hook.LastEntry().Level)
+		assert.Equal(t, "call EnrollUser", hook.LastEntry().Message)
+		assert.Contains(t, hook.LastEntry().Data, "Type")
+		assert.Contains(t, hook.LastEntry().Data, "Public Key")
+		assert.Contains(t, hook.LastEntry().Data, "user")
+
+		res := rr.Result()
+		body, err := ioutil.ReadAll(res.Body)
+		fmt.Println(string(body))
+		require.NoError(t, err, "unexpected error reading body")
+		require.Equal(t, 200, res.StatusCode, "failed to enroll user")
+		hook.Reset()
+	}
+}
+
+func TestEnrollUserSpiffeIdWithHostname(t *testing.T) {
+	hostname := "proxy"
+	header := "X-Forwarded-User"
+	c, err := generateContext(t)
+	require.NoError(t, err)
+
+	// set auth proxy
+	c.conf.AuthenticatingProxy = &config.AuthenticatingProxy{
+		Hostname:       hostname,
+		UsernameHeader: header,
+		SpiffeId:       "spiffe://proxy.com",
+	}
+
+	hook := test.NewLocal(c.logger)
+
+	for i := 0; i < 5; i++ {
+		request, err := generateSpiffeUserRequest(hostname)
+		require.NoError(t, err, "Error reading test ssh key or parsing X.509 Certificate")
+		request.Header.Set(header, "alice")
 
 		rr := httptest.NewRecorder()
 		c.EnrollUser(rr, request)
@@ -371,12 +450,63 @@ func generateRequest(hostname string, body io.ReadCloser) (*http.Request, error)
 	return &request, nil
 }
 
+func parseDERFromPEM(pemDataId string, blockType string) (*pem.Block, error) {
+	bytes, err := os.ReadFile(pemDataId)
+	if err != nil {
+		return nil, err
+	}
+
+	var block *pem.Block
+	for len(bytes) > 0 {
+		block, bytes = pem.Decode(bytes)
+		if block == nil {
+			return nil, errors.New("unable to parse PEM data")
+		}
+		if block.Type == blockType {
+			return block, nil
+		}
+	}
+	return nil, errors.New("requested block type could not be found")
+}
+
+func generateSpiffeRequest(hostname string, body io.ReadCloser) (*http.Request, error) {
+	block, err := parseDERFromPEM("testdata/proxy.crt", "CERTIFICATE")
+	if err != nil {
+		return nil, err
+	}
+
+	cert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		return nil, err
+	}
+
+	chain := [][]*x509.Certificate{{cert}}
+	conn := tls.ConnectionState{
+		VerifiedChains: chain,
+	}
+
+	request := http.Request{
+		TLS:    &conn,
+		Body:   body,
+		Header: http.Header{},
+	}
+	return &request, nil
+}
+
 func generateUserRequest(commonName string) (*http.Request, error) {
 	key, err := os.Open("testdata/ssh_alice_rsa.pub")
 	if err != nil {
 		return nil, err
 	}
 	return generateRequest(commonName, ioutil.NopCloser(key))
+}
+
+func generateSpiffeUserRequest(commonName string) (*http.Request, error) {
+	key, err := os.Open("testdata/ssh_alice_rsa.pub")
+	if err != nil {
+		return nil, err
+	}
+	return generateSpiffeRequest(commonName, ioutil.NopCloser(key))
 }
 
 func generateHostRequest() (*http.Request, error) {
