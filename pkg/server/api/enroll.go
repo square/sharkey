@@ -153,12 +153,8 @@ func proxyAuthenticated(ap *config.AuthenticatingProxy, w http.ResponseWriter, r
 		return "", false
 	}
 
-	apValidated := false
-
 	// Host name matching
-	if clientAuthenticated(r) && clientHostnameMatches(ap.Hostname, r) {
-		apValidated = true
-	}
+	hostnameMatches := (clientAuthenticated(r) && clientHostnameMatches(ap.Hostname, r))
 
 	// SPIFFE ID matching
 	spiffeIdMatches, err := clientSpiffeIdMatches(ap.SpiffeId, r)
@@ -167,12 +163,8 @@ func proxyAuthenticated(ap *config.AuthenticatingProxy, w http.ResponseWriter, r
 		logger.Error("malformed proxy spiffe id")
 	}
 
-	if spiffeIdMatches {
-		apValidated = true
-	}
-
 	// Matching fails case
-	if !(apValidated) {
+	if !(hostnameMatches || spiffeIdMatches) {
 		logHttpError(r, w, fmt.Errorf("request didn't come from proxy"), http.StatusUnauthorized, logger)
 		return "", false
 	}
