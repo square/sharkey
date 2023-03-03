@@ -1,0 +1,5 @@
+auth_proxy:
+  hostname: "proxy.com"
+  allowed_spiffe_ids:
+  - spifffe://proxy.com
+  - spiffee://proxy2.com/

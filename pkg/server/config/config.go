@@ -3,9 +3,11 @@ package config
 import (
 	"crypto/tls"
 	"crypto/x509"
+	"fmt"
 	"io/ioutil"
 	"time"
 
+	"github.com/spiffe/go-spiffe/v2/spiffeid"
 	"gopkg.in/yaml.v2"
 )
 
@@ -16,6 +18,24 @@ func Load(file string) (conf Config, err error) {
 	}
 
 	if err = yaml.Unmarshal(data, &conf); err != nil {
+		var fixedSpiffeIds []spiffeid.ID
+		var failedSpiffeIds []int
+
+		// Find if spiffe IDs failed to report them
+		for index, value := range conf.AuthenticatingProxy.AllowedSpiffeIds {
+			if !value.IsZero() {
+				fixedSpiffeIds = append(fixedSpiffeIds, value)
+			} else {
+				failedSpiffeIds = append(failedSpiffeIds, index)
+			}
+		}
+		conf.AuthenticatingProxy.AllowedSpiffeIds = fixedSpiffeIds
+
+		// Update the error with more context
+		if len(failedSpiffeIds) > 0 {
+			err = fmt.Errorf("failed to parse spiffe ids at indices %v: %w", failedSpiffeIds, err)
+		}
+
 		return
 	}
 
@@ -59,9 +79,9 @@ type Database struct {
 }
 
 type AuthenticatingProxy struct {
-	Hostname       string `yaml:"hostname"`
-	UsernameHeader string `yaml:"username_header"`
-	SpiffeId       string `yaml:"spiffe_id"`
+	Hostname         string        `yaml:"hostname"`
+	UsernameHeader   string        `yaml:"username_header"`
+	AllowedSpiffeIds []spiffeid.ID `yaml:"allowed_spiffe_ids"`
 }
 
 type GitHub struct {

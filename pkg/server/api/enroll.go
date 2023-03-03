@@ -105,7 +105,7 @@ func clientHostnameMatches(hostname string, r *http.Request) bool {
 	return cert.VerifyHostname(hostname) == nil
 }
 
-func clientSpiffeIdMatches(expected string, r *http.Request) (bool, error) {
+func clientSpiffeIdMatches(expected []spiffeid.ID, r *http.Request) (bool, error) {
 	conn := r.TLS
 	if len(conn.VerifiedChains) == 0 {
 		return false, nil
@@ -116,20 +116,17 @@ func clientSpiffeIdMatches(expected string, r *http.Request) (bool, error) {
 	// Get the SPIFFE ID from the presented certificate
 	actualId, err := x509svid.IDFromCert(cert)
 	if err != nil {
-		return false, nil
+		return false, fmt.Errorf("bad spiffe ID from cert: %w", err)
 	}
 
-	// Form a good spiffe ID from the configuration string
-	expectedId, err := spiffeid.FromString(expected)
-	if err != nil {
-		return false, err
-	}
-
-	matcher := spiffeid.MatchID(expectedId)
+	matcher := spiffeid.MatchOneOf(expected...)
 
 	validationFailed := matcher(actualId)
+	if validationFailed != nil {
+		return false, fmt.Errorf("failed validation of spiffe ID presented from cert: %w", validationFailed)
+	}
 
-	return validationFailed == nil, nil
+	return true, nil
 }
 
 func (c *Api) signHost(hostname string, pubkey ssh.PublicKey) (*ssh.Certificate, error) {
@@ -157,10 +154,10 @@ func proxyAuthenticated(ap *config.AuthenticatingProxy, w http.ResponseWriter, r
 	hostnameMatches := (clientAuthenticated(r) && clientHostnameMatches(ap.Hostname, r))
 
 	// SPIFFE ID matching
-	spiffeIdMatches, err := clientSpiffeIdMatches(ap.SpiffeId, r)
+	spiffeIdMatches, err := clientSpiffeIdMatches(ap.AllowedSpiffeIds, r)
 	if err != nil {
 		// Do not necessarily fail as other conditions might apply
-		logger.Error("malformed proxy spiffe id")
+		logger.WithError(fmt.Errorf("failed to match with a specified spiffe id: %w", err))
 	}
 
 	// Matching fails case
