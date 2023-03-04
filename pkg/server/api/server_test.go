@@ -50,19 +50,19 @@ const (
 		"i+3IRj7siWEDLwK0kga+aYrwyO2/TiB"
 	defaultProxyPath = "testdata/proxy.crt"
 	proxy2Path       = "testdata/proxy2.crt"
+	goodName         = "goodname"
+	badName          = "badname"
 )
 
 func TestValidClient(t *testing.T) {
-	goodName := "goodname"
-	badName := "badname"
-	request, err := generateHostRequest()
+	request, err := generateHostRequest(goodName)
 	require.NoError(t, err, "error reading test ssh key")
 
 	res := clientHostnameMatches(badName, request)
-	require.False(t, res, "thought a bad client was valid")
+	require.Error(t, res, "thought a bad client was valid")
 
 	res = clientHostnameMatches(goodName, request)
-	require.True(t, res, "thought a good client was invalid")
+	require.NoError(t, res, "thought a good client was invalid")
 }
 
 func TestSignHost(t *testing.T) {
@@ -89,11 +89,24 @@ func TestEnrollHost(t *testing.T) {
 	require.NoError(t, err)
 
 	for i := 0; i < 5; i++ {
-		request, err := generateHostRequest()
+		request, err := generateHostRequest(goodName)
 		require.NoError(t, err, "Error reading test ssh key")
 
 		_, err = c.EnrollHost("goodname", request)
 		require.NoError(t, err, "Error enrolling host")
+	}
+}
+
+func TestClientHostNameMatchesEmpty(t *testing.T) {
+	_, err := generateContext(t)
+	require.NoError(t, err)
+
+	for i := 0; i < 5; i++ {
+		request, err := generateHostRequest("")
+		require.NoError(t, err, "Error reading test ssh key")
+
+		err = clientHostnameMatches("", request)
+		require.Error(t, err, "Accepted unknown host")
 	}
 }
 
@@ -119,7 +132,8 @@ func TestEnrollUserNoSpiffeId(t *testing.T) {
 		rr := httptest.NewRecorder()
 		c.EnrollUser(rr, request)
 
-		assert.Equal(t, 1, len(hook.Entries))
+		assert.Contains(t, hook.Entries[len(hook.Entries)-2].Message, "failed to match with a specified spiffe id")
+		assert.Equal(t, 2, len(hook.Entries))
 		assert.Equal(t, logrus.InfoLevel, hook.LastEntry().Level)
 		assert.Equal(t, "call EnrollUser", hook.LastEntry().Message)
 		assert.Contains(t, hook.LastEntry().Data, "Type")
@@ -158,7 +172,8 @@ func TestEnrollUserSpiffeIdEmptyHostname(t *testing.T) {
 		rr := httptest.NewRecorder()
 		c.EnrollUser(rr, request)
 
-		assert.Equal(t, 1, len(hook.Entries))
+		assert.Contains(t, hook.Entries[len(hook.Entries)-2].Message, "hostname failed to verify")
+		assert.Equal(t, 2, len(hook.Entries))
 		assert.Equal(t, logrus.InfoLevel, hook.LastEntry().Level)
 		assert.Equal(t, "call EnrollUser", hook.LastEntry().Message)
 		assert.Contains(t, hook.LastEntry().Data, "Type")
@@ -174,7 +189,47 @@ func TestEnrollUserSpiffeIdEmptyHostname(t *testing.T) {
 	}
 }
 
-func TestEnrollUserSpiffeIdNoHostname(t *testing.T) {
+func TestEnrollUserSpiffeIdWrongHostname(t *testing.T) {
+	hostname := "proxy"
+	header := "X-Forwarded-User"
+	c, err := generateContext(t)
+	require.NoError(t, err)
+
+	// set auth proxy
+	c.conf.AuthenticatingProxy = &config.AuthenticatingProxy{
+		Hostname:         hostname,
+		UsernameHeader:   header,
+		AllowedSpiffeIds: []spiffeid.ID{spiffeid.RequireFromString("spiffe://proxy.com")},
+	}
+
+	hook := test.NewLocal(c.logger)
+
+	for i := 0; i < 5; i++ {
+		request, err := generateSpiffeUserRequest(badName, defaultProxyPath)
+		require.NoError(t, err, "Error reading test ssh key or parsing X.509 Certificate")
+		request.Header.Set(header, "alice")
+
+		rr := httptest.NewRecorder()
+		c.EnrollUser(rr, request)
+
+		assert.Contains(t, hook.Entries[len(hook.Entries)-2].Message, badName)
+		assert.Equal(t, 2, len(hook.Entries))
+		assert.Equal(t, logrus.InfoLevel, hook.LastEntry().Level)
+		assert.Equal(t, "call EnrollUser", hook.LastEntry().Message)
+		assert.Contains(t, hook.LastEntry().Data, "Type")
+		assert.Contains(t, hook.LastEntry().Data, "Public Key")
+		assert.Contains(t, hook.LastEntry().Data, "user")
+
+		res := rr.Result()
+		body, err := ioutil.ReadAll(res.Body)
+		fmt.Println(string(body))
+		require.NoError(t, err, "unexpected error reading body")
+		require.Equal(t, 200, res.StatusCode, "failed to enroll user")
+		hook.Reset()
+	}
+}
+
+func TestEnrollUserSpiffeIdNoConfiguredHostname(t *testing.T) {
 	hostname := "proxy"
 	header := "X-Forwarded-User"
 	c, err := generateContext(t)
@@ -196,7 +251,8 @@ func TestEnrollUserSpiffeIdNoHostname(t *testing.T) {
 		rr := httptest.NewRecorder()
 		c.EnrollUser(rr, request)
 
-		assert.Equal(t, 1, len(hook.Entries))
+		assert.Contains(t, hook.Entries[len(hook.Entries)-2].Message, "hostname failed to verify")
+		assert.Equal(t, 2, len(hook.Entries))
 		assert.Equal(t, logrus.InfoLevel, hook.LastEntry().Level)
 		assert.Equal(t, "call EnrollUser", hook.LastEntry().Message)
 		assert.Contains(t, hook.LastEntry().Data, "Type")
@@ -228,7 +284,7 @@ func TestEnrollUserSpiffeIdWithHostname(t *testing.T) {
 	hook := test.NewLocal(c.logger)
 
 	for i := 0; i < 5; i++ {
-		request, err := generateSpiffeUserRequest("", defaultProxyPath)
+		request, err := generateSpiffeUserRequest("proxy", defaultProxyPath)
 		require.NoError(t, err, "Error reading test ssh key or parsing X.509 Certificate")
 		request.Header.Set(header, "alice")
 
@@ -272,7 +328,7 @@ func TestEnrollUserSpiffeIdSecondId(t *testing.T) {
 		rr := httptest.NewRecorder()
 		c.EnrollUser(rr, request)
 
-		assert.Equal(t, 1, len(hook.Entries))
+		assert.Equal(t, 2, len(hook.Entries))
 		assert.Equal(t, logrus.InfoLevel, hook.LastEntry().Level)
 		assert.Equal(t, "call EnrollUser", hook.LastEntry().Message)
 		assert.Contains(t, hook.LastEntry().Data, "Type")
@@ -378,7 +434,7 @@ func TestGetAuthority(t *testing.T) {
 	c, err := generateContext(t)
 	require.NoError(t, err)
 
-	req, err := generateHostRequest()
+	req, err := generateHostRequest(goodName)
 	require.NoError(t, err, "Error reading test ssh key")
 
 	rec := httptest.NewRecorder()
@@ -400,7 +456,7 @@ func TestGetAuthorityWithExtraCAs(t *testing.T) {
 	require.NoError(t, err)
 	c = addExtraAuthorities(t, c)
 
-	req, err := generateHostRequest()
+	req, err := generateHostRequest("goodname")
 	require.NoError(t, err, "Error reading test ssh key")
 
 	rec := httptest.NewRecorder()
@@ -446,7 +502,7 @@ func TestStatus(t *testing.T) {
 	c, err := generateContext(t)
 	require.NoError(t, err)
 
-	req, err := generateHostRequest()
+	req, err := generateHostRequest(goodName)
 	require.NoError(t, err)
 
 	rec := httptest.NewRecorder()
@@ -558,6 +614,10 @@ func generateSpiffeRequest(hostname string, proxyPath string, body io.ReadCloser
 		return nil, err
 	}
 
+	if len(hostname) > 0 {
+		cert.DNSNames = []string{hostname}
+	}
+
 	chain := [][]*x509.Certificate{{cert}}
 	conn := tls.ConnectionState{
 		VerifiedChains: chain,
@@ -587,10 +647,10 @@ func generateSpiffeUserRequest(commonName string, proxyPath string) (*http.Reque
 	return generateSpiffeRequest(commonName, proxyPath, ioutil.NopCloser(key))
 }
 
-func generateHostRequest() (*http.Request, error) {
+func generateHostRequest(hostname string) (*http.Request, error) {
 	key, err := os.Open("testdata/ssh_host_rsa_key.pub")
 	if err != nil {
 		return nil, err
 	}
-	return generateRequest("goodname", ioutil.NopCloser(key))
+	return generateRequest(hostname, ioutil.NopCloser(key))
 }

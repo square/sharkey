@@ -53,7 +53,11 @@ func (c *Api) Enroll(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "no client certificate provided", http.StatusUnauthorized)
 		return
 	}
-	if !clientHostnameMatches(hostname, r) {
+
+	err := clientHostnameMatches(hostname, r)
+	if err != nil {
+		c.logger.Error(err)
+
 		http.Error(w, "hostname does not match certificate", http.StatusForbidden)
 		return
 	}
@@ -96,13 +100,19 @@ func clientAuthenticated(r *http.Request) bool {
 	return len(r.TLS.VerifiedChains) > 0
 }
 
-func clientHostnameMatches(hostname string, r *http.Request) bool {
+func clientHostnameMatches(hostname string, r *http.Request) error {
 	conn := r.TLS
 	if len(conn.VerifiedChains) == 0 {
-		return false
+		return fmt.Errorf("length of TLS chain is zero")
 	}
 	cert := conn.VerifiedChains[0][0]
-	return cert.VerifyHostname(hostname) == nil
+
+	err := cert.VerifyHostname(hostname)
+	if err != nil {
+		return fmt.Errorf("hostname failed to verify: %w", err)
+	}
+
+	return nil
 }
 
 func clientSpiffeIdMatches(expected []spiffeid.ID, r *http.Request) (bool, error) {
@@ -151,13 +161,20 @@ func proxyAuthenticated(ap *config.AuthenticatingProxy, w http.ResponseWriter, r
 	}
 
 	// Host name matching
-	hostnameMatches := (clientAuthenticated(r) && clientHostnameMatches(ap.Hostname, r))
+	err := clientHostnameMatches(ap.Hostname, r)
+
+	if err != nil {
+		// Log as informational, hostname may not be the selected method
+		logger.Info(err)
+	}
+
+	hostnameMatches := err == nil
 
 	// SPIFFE ID matching
 	spiffeIdMatches, err := clientSpiffeIdMatches(ap.AllowedSpiffeIds, r)
 	if err != nil {
-		// Do not necessarily fail as other conditions might apply
-		logger.WithError(fmt.Errorf("failed to match with a specified spiffe id: %w", err))
+		// Log as informational, may not be a problem
+		logger.Info(fmt.Errorf("failed to match with a specified spiffe id: %w", err))
 	}
 
 	// Matching fails case

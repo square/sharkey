@@ -18,19 +18,8 @@ func Load(file string) (conf Config, err error) {
 	}
 
 	if err = yaml.Unmarshal(data, &conf); err != nil {
-		var fixedSpiffeIds []spiffeid.ID
-		var failedSpiffeIds []int
 
-		// Find if spiffe IDs failed to report them
-		for index, value := range conf.AuthenticatingProxy.AllowedSpiffeIds {
-			if !value.IsZero() {
-				fixedSpiffeIds = append(fixedSpiffeIds, value)
-			} else {
-				failedSpiffeIds = append(failedSpiffeIds, index)
-			}
-		}
-		conf.AuthenticatingProxy.AllowedSpiffeIds = fixedSpiffeIds
-
+		failedSpiffeIds := conf.AuthenticatingProxy.fixSpiffeIds()
 		// Update the error with more context
 		if len(failedSpiffeIds) > 0 {
 			err = fmt.Errorf("failed to parse spiffe ids at indices %v: %w", failedSpiffeIds, err)
@@ -141,4 +130,20 @@ func BuildTLS(opts TLS) (*tls.Config, error) {
 	}
 
 	return config, nil
+}
+
+func (ap *AuthenticatingProxy) fixSpiffeIds() []int {
+	var fixedSpiffeIds []spiffeid.ID
+	var failedSpiffeIds []int
+
+	// Find if spiffe IDs failed to report them
+	for index, value := range ap.AllowedSpiffeIds {
+		if !value.IsZero() {
+			fixedSpiffeIds = append(fixedSpiffeIds, value)
+		} else {
+			failedSpiffeIds = append(failedSpiffeIds, index)
+		}
+	}
+	ap.AllowedSpiffeIds = fixedSpiffeIds
+	return failedSpiffeIds
 }
