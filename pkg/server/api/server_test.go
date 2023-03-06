@@ -456,7 +456,7 @@ func TestGetAuthorityWithExtraCAs(t *testing.T) {
 	require.NoError(t, err)
 	c = addExtraAuthorities(t, c)
 
-	req, err := generateHostRequest("goodname")
+	req, err := generateHostRequest(goodName)
 	require.NoError(t, err, "Error reading test ssh key")
 
 	rec := httptest.NewRecorder()
