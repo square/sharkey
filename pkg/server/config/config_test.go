@@ -31,32 +31,47 @@ func TestSpiffeIdGoodConfigFill(t *testing.T) {
 
 func TestSpiffeIdBadConfigFill(t *testing.T) {
 	conf, err := Load(badSpiffeConfigYaml)
+	expectedBadSpiffeId, _ := spiffeid.FromString("")
 
-	expected := AuthenticatingProxy{}
+	expected := AuthenticatingProxy{AllowedSpiffeIds: []spiffeid.ID{expectedBadSpiffeId, expectedBadSpiffeId}}
 
 	require.Error(t, err, "Failed to catch SPIFFE error")
-	require.ErrorContains(t, err, "failed to parse spiffe ids at indices [0 1]:")
 	require.Equal(t, &expected, conf.AuthenticatingProxy, "Authenticated Proxies do not match")
 }
 
 func TestSpiffeIdBadConfigPlus(t *testing.T) {
-	expectedAp := AuthenticatingProxy{Hostname: "proxy.com"}
+	expectedBadSpiffeId, _ := spiffeid.FromString("")
+	expectedAp := AuthenticatingProxy{
+		Hostname:         "proxy.com",
+		AllowedSpiffeIds: []spiffeid.ID{expectedBadSpiffeId, expectedBadSpiffeId},
+	}
 
 	conf, err := Load(badSpiffeConfigPlusYaml)
 
 	require.Error(t, err, "Failed to catch SPIFFE error")
-	require.ErrorContains(t, err, "failed to parse spiffe ids at indices [0 1]:")
 	require.Equal(t, &expectedAp, conf.AuthenticatingProxy, "Authenticated Proxies do not match")
 }
 
 func TestSpiffeIdMixedConfig(t *testing.T) {
+	expectedBadSpiffeId, _ := spiffeid.FromString("")
 	expectedAp := AuthenticatingProxy{
-		AllowedSpiffeIds: []spiffeid.ID{spiffeid.RequireFromString("spiffe://proxy.com")},
+		AllowedSpiffeIds: []spiffeid.ID{spiffeid.RequireFromString("spiffe://proxy.com"), expectedBadSpiffeId},
 	}
 
 	conf, err := Load(mixedSpiffeConfigYaml)
 
 	require.Error(t, err, "Failed to catch SPIFFE errors")
-	require.ErrorContains(t, err, "failed to parse spiffe ids at indices [1]:")
+	require.ErrorContains(t, err, "failed to parse: [1]", "Failed to identify the appropriately failed SPIFFE ID")
 	require.Equal(t, &expectedAp, conf.AuthenticatingProxy, "Authenticated Proxies do not match")
+}
+
+func TestSpiffeIdBadTypeConfig(t *testing.T) {
+
+	conf, err := Load(badConfigTypeYaml)
+
+	expectedConf := Config{AuthenticatingProxy: nil}
+
+	require.Error(t, err, "Failed to catch YAML errors")
+	require.NotContains(t, err.Error(), "spiffe", "Incorrectly reported error as SPIFFE error")
+	require.Equal(t, expectedConf.AuthenticatingProxy, conf.AuthenticatingProxy, "Authenticated Proxies do not match")
 }

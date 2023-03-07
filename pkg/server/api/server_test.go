@@ -58,11 +58,13 @@ func TestValidClient(t *testing.T) {
 	request, err := generateHostRequest(goodName)
 	require.NoError(t, err, "error reading test ssh key")
 
-	res := clientHostnameMatches(badName, request)
-	require.Error(t, res, "thought a bad client was valid")
+	hostnameMatches, err := clientHostnameMatches(badName, request)
+	require.Error(t, err, "thought a bad client was valid")
+	require.False(t, hostnameMatches, "thought a bad client was valid")
 
-	res = clientHostnameMatches(goodName, request)
-	require.NoError(t, res, "thought a good client was invalid")
+	hostnameMatches, err = clientHostnameMatches(goodName, request)
+	require.NoError(t, err, "thought a good client was invalid")
+	require.True(t, hostnameMatches, "thought a good client was invalid")
 }
 
 func TestSignHost(t *testing.T) {
@@ -105,7 +107,8 @@ func TestClientHostNameMatchesEmpty(t *testing.T) {
 		request, err := generateHostRequest("")
 		require.NoError(t, err, "Error reading test ssh key")
 
-		err = clientHostnameMatches("", request)
+		hostnameMatches, err := clientHostnameMatches("", request)
+		require.False(t, hostnameMatches, "Accepted unknown host")
 		require.Error(t, err, "Accepted unknown host")
 	}
 }
@@ -132,8 +135,7 @@ func TestEnrollUserNoSpiffeId(t *testing.T) {
 		rr := httptest.NewRecorder()
 		c.EnrollUser(rr, request)
 
-		assert.Contains(t, hook.Entries[len(hook.Entries)-2].Message, "failed to match with a specified spiffe id")
-		assert.Equal(t, 2, len(hook.Entries))
+		assert.Equal(t, 1, len(hook.Entries))
 		assert.Equal(t, logrus.InfoLevel, hook.LastEntry().Level)
 		assert.Equal(t, "call EnrollUser", hook.LastEntry().Message)
 		assert.Contains(t, hook.LastEntry().Data, "Type")
@@ -172,8 +174,7 @@ func TestEnrollUserSpiffeIdEmptyHostname(t *testing.T) {
 		rr := httptest.NewRecorder()
 		c.EnrollUser(rr, request)
 
-		assert.Contains(t, hook.Entries[len(hook.Entries)-2].Message, "hostname failed to verify")
-		assert.Equal(t, 2, len(hook.Entries))
+		assert.Equal(t, 1, len(hook.Entries))
 		assert.Equal(t, logrus.InfoLevel, hook.LastEntry().Level)
 		assert.Equal(t, "call EnrollUser", hook.LastEntry().Message)
 		assert.Contains(t, hook.LastEntry().Data, "Type")
@@ -212,8 +213,7 @@ func TestEnrollUserSpiffeIdWrongHostname(t *testing.T) {
 		rr := httptest.NewRecorder()
 		c.EnrollUser(rr, request)
 
-		assert.Contains(t, hook.Entries[len(hook.Entries)-2].Message, badName)
-		assert.Equal(t, 2, len(hook.Entries))
+		assert.Equal(t, 1, len(hook.Entries))
 		assert.Equal(t, logrus.InfoLevel, hook.LastEntry().Level)
 		assert.Equal(t, "call EnrollUser", hook.LastEntry().Message)
 		assert.Contains(t, hook.LastEntry().Data, "Type")
@@ -251,8 +251,7 @@ func TestEnrollUserSpiffeIdNoConfiguredHostname(t *testing.T) {
 		rr := httptest.NewRecorder()
 		c.EnrollUser(rr, request)
 
-		assert.Contains(t, hook.Entries[len(hook.Entries)-2].Message, "hostname failed to verify")
-		assert.Equal(t, 2, len(hook.Entries))
+		assert.Equal(t, 1, len(hook.Entries))
 		assert.Equal(t, logrus.InfoLevel, hook.LastEntry().Level)
 		assert.Equal(t, "call EnrollUser", hook.LastEntry().Message)
 		assert.Contains(t, hook.LastEntry().Data, "Type")
@@ -328,7 +327,7 @@ func TestEnrollUserSpiffeIdSecondId(t *testing.T) {
 		rr := httptest.NewRecorder()
 		c.EnrollUser(rr, request)
 
-		assert.Equal(t, 2, len(hook.Entries))
+		assert.Equal(t, 1, len(hook.Entries))
 		assert.Equal(t, logrus.InfoLevel, hook.LastEntry().Level)
 		assert.Equal(t, "call EnrollUser", hook.LastEntry().Message)
 		assert.Contains(t, hook.LastEntry().Data, "Type")

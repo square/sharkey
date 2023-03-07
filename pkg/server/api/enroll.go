@@ -54,9 +54,11 @@ func (c *Api) Enroll(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := clientHostnameMatches(hostname, r)
-	if err != nil {
-		c.logger.Error(err)
+	hostnameMatches, err := clientHostnameMatches(hostname, r)
+	if !hostnameMatches {
+		if err != nil {
+			c.logger.Error(err)
+		}
 
 		http.Error(w, "hostname does not match certificate", http.StatusForbidden)
 		return
@@ -100,19 +102,19 @@ func clientAuthenticated(r *http.Request) bool {
 	return len(r.TLS.VerifiedChains) > 0
 }
 
-func clientHostnameMatches(hostname string, r *http.Request) error {
+func clientHostnameMatches(hostname string, r *http.Request) (bool, error) {
 	conn := r.TLS
 	if len(conn.VerifiedChains) == 0 {
-		return fmt.Errorf("length of TLS chain is zero")
+		return false, fmt.Errorf("length of TLS chain is zero")
 	}
 	cert := conn.VerifiedChains[0][0]
 
 	err := cert.VerifyHostname(hostname)
 	if err != nil {
-		return fmt.Errorf("hostname failed to verify: %w", err)
+		return false, fmt.Errorf("hostname failed to verify: %w", err)
 	}
 
-	return nil
+	return true, nil
 }
 
 func clientSpiffeIdMatches(expected []spiffeid.ID, r *http.Request) (bool, error) {
@@ -161,24 +163,14 @@ func proxyAuthenticated(ap *config.AuthenticatingProxy, w http.ResponseWriter, r
 	}
 
 	// Host name matching
-	err := clientHostnameMatches(ap.Hostname, r)
-
-	if err != nil {
-		// Log as informational, hostname may not be the selected method
-		logger.Info(err)
-	}
-
-	hostnameMatches := err == nil
+	hostnameMatches, hostnameErr := clientHostnameMatches(ap.Hostname, r)
 
 	// SPIFFE ID matching
-	spiffeIdMatches, err := clientSpiffeIdMatches(ap.AllowedSpiffeIds, r)
-	if err != nil {
-		// Log as informational, may not be a problem
-		logger.Info(fmt.Errorf("failed to match with a specified spiffe id: %w", err))
-	}
+	spiffeIdMatches, spiffeIdErr := clientSpiffeIdMatches(ap.AllowedSpiffeIds, r)
 
 	// Matching fails case
 	if !(hostnameMatches || spiffeIdMatches) {
+		logger.WithError(fmt.Errorf("hostname error: %v. spiffe id error: %v", hostnameErr, spiffeIdErr))
 		logHttpError(r, w, fmt.Errorf("request didn't come from proxy"), http.StatusUnauthorized, logger)
 		return "", false
 	}

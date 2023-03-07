@@ -114,14 +114,14 @@ func TestEmptyGitHubUser(t *testing.T) {
 		rr := httptest.NewRecorder()
 		c.EnrollUser(rr, request)
 
-		assert.Equal(t, 3, len(hook.Entries))
-		assert.Equal(t, logrus.ErrorLevel, hook.Entries[1].Level)
+		assert.Equal(t, 2, len(hook.Entries))
+		assert.Equal(t, logrus.ErrorLevel, hook.Entries[0].Level)
 		assert.Equal(t, logrus.InfoLevel, hook.LastEntry().Level)
 		assert.Equal(t, "call EnrollUser", hook.LastEntry().Message)
 		assert.Contains(t, hook.LastEntry().Data, "Type")
 		assert.Contains(t, hook.LastEntry().Data, "Public Key")
 		assert.Contains(t, hook.LastEntry().Data, "user")
-		assert.Contains(t, hook.Entries[1].Message, "no rows in result set")
+		assert.Contains(t, hook.Entries[0].Message, "no rows in result set")
 
 		res := rr.Result()
 		body, err := ioutil.ReadAll(res.Body)
@@ -169,7 +169,7 @@ func TestGitHubUser(t *testing.T) {
 		rr := httptest.NewRecorder()
 		c.EnrollUser(rr, request)
 
-		assert.Equal(t, 2, len(hook.Entries))
+		assert.Equal(t, 1, len(hook.Entries))
 		assert.Equal(t, logrus.InfoLevel, hook.LastEntry().Level)
 		assert.Equal(t, "call EnrollUser", hook.LastEntry().Message)
 		assert.Contains(t, hook.LastEntry().Data, "Type")
