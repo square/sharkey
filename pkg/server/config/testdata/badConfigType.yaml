@@ -1,0 +1,5 @@
+auth_proxy:
+  allowed_spiffe_ids:
+    something:
+    - test
+  - "spiffe://proxy.com"

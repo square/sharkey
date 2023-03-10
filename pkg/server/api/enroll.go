@@ -26,6 +26,8 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
+	"github.com/spiffe/go-spiffe/v2/spiffeid"
+	"github.com/spiffe/go-spiffe/v2/svid/x509svid"
 	"github.com/square/sharkey/pkg/server/cert"
 	"github.com/square/sharkey/pkg/server/config"
 	"golang.org/x/crypto/ssh"
@@ -51,7 +53,13 @@ func (c *Api) Enroll(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "no client certificate provided", http.StatusUnauthorized)
 		return
 	}
-	if !clientHostnameMatches(hostname, r) {
+
+	hostnameMatches, err := clientHostnameMatches(hostname, r)
+	if !hostnameMatches {
+		if err != nil {
+			c.logger.Error(err)
+		}
+
 		http.Error(w, "hostname does not match certificate", http.StatusForbidden)
 		return
 	}
@@ -94,13 +102,43 @@ func clientAuthenticated(r *http.Request) bool {
 	return len(r.TLS.VerifiedChains) > 0
 }
 
-func clientHostnameMatches(hostname string, r *http.Request) bool {
+func clientHostnameMatches(hostname string, r *http.Request) (bool, error) {
 	conn := r.TLS
 	if len(conn.VerifiedChains) == 0 {
-		return false
+		return false, fmt.Errorf("length of TLS chain is zero")
 	}
 	cert := conn.VerifiedChains[0][0]
-	return cert.VerifyHostname(hostname) == nil
+
+	err := cert.VerifyHostname(hostname)
+	if err != nil {
+		return false, fmt.Errorf("hostname failed to verify: %w", err)
+	}
+
+	return true, nil
+}
+
+func clientSpiffeIdMatches(expected []spiffeid.ID, r *http.Request) (bool, error) {
+	conn := r.TLS
+	if len(conn.VerifiedChains) == 0 {
+		return false, fmt.Errorf("length of TLS chain is zero")
+	}
+
+	cert := conn.VerifiedChains[0][0]
+
+	// Get the SPIFFE ID from the presented certificate
+	actualId, err := x509svid.IDFromCert(cert)
+	if err != nil {
+		return false, fmt.Errorf("bad spiffe ID from cert: %w", err)
+	}
+
+	matcher := spiffeid.MatchOneOf(expected...)
+
+	validationFailed := matcher(actualId)
+	if validationFailed != nil {
+		return false, fmt.Errorf("failed validation of spiffe ID presented from cert: %w", validationFailed)
+	}
+
+	return true, nil
 }
 
 func (c *Api) signHost(hostname string, pubkey ssh.PublicKey) (*ssh.Certificate, error) {
@@ -124,7 +162,15 @@ func proxyAuthenticated(ap *config.AuthenticatingProxy, w http.ResponseWriter, r
 		return "", false
 	}
 
-	if !(clientAuthenticated(r) && clientHostnameMatches(ap.Hostname, r)) {
+	// Host name matching
+	hostnameMatches, hostnameErr := clientHostnameMatches(ap.Hostname, r)
+
+	// SPIFFE ID matching
+	spiffeIdMatches, spiffeIdErr := clientSpiffeIdMatches(ap.AllowedSpiffeIds, r)
+
+	// Matching fails case
+	if !(hostnameMatches || spiffeIdMatches) {
+		logger.WithError(fmt.Errorf("hostname error: %v. spiffe id error: %v", hostnameErr, spiffeIdErr))
 		logHttpError(r, w, fmt.Errorf("request didn't come from proxy"), http.StatusUnauthorized, logger)
 		return "", false
 	}

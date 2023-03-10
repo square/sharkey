@@ -1,0 +1,4 @@
+auth_proxy:
+  allowed_spiffe_ids:
+  - spifffe://proxy.com
+  - spiffee://proxy2.com/

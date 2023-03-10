@@ -3,9 +3,11 @@ package config
 import (
 	"crypto/tls"
 	"crypto/x509"
+	"fmt"
 	"io/ioutil"
 	"time"
 
+	"github.com/spiffe/go-spiffe/v2/spiffeid"
 	"gopkg.in/yaml.v2"
 )
 
@@ -16,6 +18,17 @@ func Load(file string) (conf Config, err error) {
 	}
 
 	if err = yaml.Unmarshal(data, &conf); err != nil {
+		// Ensure we can and should inspect the AuthenticatingProxy member
+		if conf.AuthenticatingProxy != nil && len(conf.AuthenticatingProxy.AllowedSpiffeIds) > 0 {
+
+			// Make sure the spiffe IDs we wanted were valid
+			spiffeErr := conf.AuthenticatingProxy.validateSpiffeIds()
+
+			// Report the invalid ones if they are invalid
+			if spiffeErr != nil {
+				err = fmt.Errorf("spiffe error: %w: %v", spiffeErr, err)
+			}
+		}
 		return
 	}
 
@@ -58,9 +71,16 @@ type Database struct {
 	TLS      *TLS
 }
 
+// An AuthenticatingProxy represents a known entity that will perform
+// authentication of incoming requests to Sharkey.
+//
+// The authenticating proxy connection can be validated with either
+// a hostname in the TLS connection OR by a SPIFFE ID contained in
+// the certificate used for the TLS connection.
 type AuthenticatingProxy struct {
-	Hostname       string `yaml:"hostname"`
-	UsernameHeader string `yaml:"username_header"`
+	Hostname         string        `yaml:"hostname"`           // Expected hostname of the authenticating proxy
+	UsernameHeader   string        `yaml:"username_header"`    // Username header key the authenticating proxy will use
+	AllowedSpiffeIds []spiffeid.ID `yaml:"allowed_spiffe_ids"` // A list of SPIFFE IDs that can be used for authentcation
 }
 
 type GitHub struct {
@@ -120,4 +140,23 @@ func BuildTLS(opts TLS) (*tls.Config, error) {
 	}
 
 	return config, nil
+}
+
+// Validate the configured SPIFFE IDs by index since they get
+// configured as empty by the parser. The "omitempty" flag
+// does not appear to work with spiffeid.ID.isZero()
+func (ap *AuthenticatingProxy) validateSpiffeIds() error {
+	var failedSpiffeIds []int
+	for index, value := range ap.AllowedSpiffeIds {
+		if value.IsZero() {
+			failedSpiffeIds = append(failedSpiffeIds, index)
+		}
+	}
+
+	// If there was an error, report  the indices.
+	if len(failedSpiffeIds) > 0 {
+		return fmt.Errorf("indices of spiffe ids that failed to parse: %v", failedSpiffeIds)
+	}
+
+	return nil
 }
