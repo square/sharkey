@@ -120,7 +120,7 @@ func clientHostnameMatches(hostname string, r *http.Request) (bool, error) {
 func clientSpiffeIdMatches(expected []spiffeid.ID, r *http.Request) (bool, error) {
 	conn := r.TLS
 	if len(conn.VerifiedChains) == 0 {
-		return false, nil
+		return false, fmt.Errorf("length of TLS chain is zero")
 	}
 
 	cert := conn.VerifiedChains[0][0]
