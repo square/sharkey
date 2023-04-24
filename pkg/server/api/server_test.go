@@ -23,7 +23,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -71,7 +70,7 @@ func TestSignHost(t *testing.T) {
 	c, err := generateContext(t)
 	require.NoError(t, err)
 
-	data, err := ioutil.ReadFile("testdata/ssh_host_rsa_key.pub")
+	data, err := os.ReadFile("testdata/ssh_host_rsa_key.pub")
 	require.NoError(t, err)
 
 	pubkey, _, _, _, err := ssh.ParseAuthorizedKey(data)
@@ -143,7 +142,7 @@ func TestEnrollUserNoSpiffeId(t *testing.T) {
 		assert.Contains(t, hook.LastEntry().Data, "user")
 
 		res := rr.Result()
-		body, err := ioutil.ReadAll(res.Body)
+		body, err := io.ReadAll(res.Body)
 		fmt.Println(string(body))
 		require.NoError(t, err, "unexpected error reading body")
 		require.Equal(t, 200, res.StatusCode, "failed to enroll user")
@@ -182,7 +181,7 @@ func TestEnrollUserSpiffeIdEmptyHostname(t *testing.T) {
 		assert.Contains(t, hook.LastEntry().Data, "user")
 
 		res := rr.Result()
-		body, err := ioutil.ReadAll(res.Body)
+		body, err := io.ReadAll(res.Body)
 		fmt.Println(string(body))
 		require.NoError(t, err, "unexpected error reading body")
 		require.Equal(t, 200, res.StatusCode, "failed to enroll user")
@@ -221,7 +220,7 @@ func TestEnrollUserSpiffeIdWrongHostname(t *testing.T) {
 		assert.Contains(t, hook.LastEntry().Data, "user")
 
 		res := rr.Result()
-		body, err := ioutil.ReadAll(res.Body)
+		body, err := io.ReadAll(res.Body)
 		fmt.Println(string(body))
 		require.NoError(t, err, "unexpected error reading body")
 		require.Equal(t, 200, res.StatusCode, "failed to enroll user")
@@ -259,7 +258,7 @@ func TestEnrollUserSpiffeIdNoConfiguredHostname(t *testing.T) {
 		assert.Contains(t, hook.LastEntry().Data, "user")
 
 		res := rr.Result()
-		body, err := ioutil.ReadAll(res.Body)
+		body, err := io.ReadAll(res.Body)
 		fmt.Println(string(body))
 		require.NoError(t, err, "unexpected error reading body")
 		require.Equal(t, 200, res.StatusCode, "failed to enroll user")
@@ -298,7 +297,7 @@ func TestEnrollUserSpiffeIdWithHostname(t *testing.T) {
 		assert.Contains(t, hook.LastEntry().Data, "user")
 
 		res := rr.Result()
-		body, err := ioutil.ReadAll(res.Body)
+		body, err := io.ReadAll(res.Body)
 		fmt.Println(string(body))
 		require.NoError(t, err, "unexpected error reading body")
 		require.Equal(t, 200, res.StatusCode, "failed to enroll user")
@@ -335,7 +334,7 @@ func TestEnrollUserSpiffeIdSecondId(t *testing.T) {
 		assert.Contains(t, hook.LastEntry().Data, "user")
 
 		res := rr.Result()
-		body, err := ioutil.ReadAll(res.Body)
+		body, err := io.ReadAll(res.Body)
 		fmt.Println(string(body))
 		require.NoError(t, err, "unexpected error reading body")
 		require.Equal(t, 200, res.StatusCode, "failed to enroll user")
@@ -363,7 +362,7 @@ func TestEnrollUserNoProxyConfigured(t *testing.T) {
 	assert.Contains(t, hook.LastEntry().Data, "code")
 
 	res := rr.Result()
-	_, err = ioutil.ReadAll(res.Body)
+	_, err = io.ReadAll(res.Body)
 	require.NoError(t, err, "unexpected error reading body")
 	require.Equal(t, 404, res.StatusCode, "expected 404 for unconfigured proxy")
 }
@@ -392,7 +391,7 @@ func TestEnrollNoAuthedUser(t *testing.T) {
 	assert.Contains(t, hook.LastEntry().Data, "code")
 
 	res := rr.Result()
-	_, err = ioutil.ReadAll(res.Body)
+	_, err = io.ReadAll(res.Body)
 	require.NoError(t, err, "unexpected error reading body")
 	require.Equal(t, 401, res.StatusCode, "expected 401 for unauthed user")
 }
@@ -424,7 +423,7 @@ func TestEnrollWrongProxyDomain(t *testing.T) {
 	assert.Contains(t, hook.LastEntry().Data, "code")
 
 	res := rr.Result()
-	_, err = ioutil.ReadAll(res.Body)
+	_, err = io.ReadAll(res.Body)
 	require.NoError(t, err, "unexpected error reading body")
 	require.Equal(t, 401, res.StatusCode, "expected 401 for requets not from proxy")
 }
@@ -442,8 +441,8 @@ func TestGetAuthority(t *testing.T) {
 	rec.Flush()
 	require.Equalf(t, 200, rec.Code, "Request to /authority failed with %d", rec.Code)
 
-	body, _ := ioutil.ReadAll(rec.Body)
-	expected, err := ioutil.ReadFile("testdata/server_ca.pub")
+	body, _ := io.ReadAll(rec.Body)
+	expected, err := os.ReadFile("testdata/server_ca.pub")
 	require.NoError(t, err, "Error reading testdata")
 
 	require.Equalf(t, []byte(fmt.Sprintf("@cert-authority * %s", expected)), body,
@@ -464,12 +463,12 @@ func TestGetAuthorityWithExtraCAs(t *testing.T) {
 	rec.Flush()
 	require.Equalf(t, 200, rec.Code, "Request to /authority failed with %d", rec.Code)
 
-	body, _ := ioutil.ReadAll(rec.Body)
+	body, _ := io.ReadAll(rec.Body)
 	receivedCAs := strings.Split(string(body), "\n")
-	expectedCA1Bytes, err := ioutil.ReadFile("testdata/server_ca.pub")
+	expectedCA1Bytes, err := os.ReadFile("testdata/server_ca.pub")
 	require.NoError(t, err, "Error reading testdata")
 	expectedCA1 := fmt.Sprintf("@cert-authority * %s", strings.Trim(string(expectedCA1Bytes), "\n"))
-	expectedCA2Bytes, err := ioutil.ReadFile("testdata/next_server_ca.pub")
+	expectedCA2Bytes, err := os.ReadFile("testdata/next_server_ca.pub")
 	require.NoError(t, err, "Error reading testdata")
 	expectedCA2 := fmt.Sprintf("@cert-authority * %s", strings.Trim(string(expectedCA2Bytes), "\n"))
 
@@ -510,7 +509,7 @@ func TestStatus(t *testing.T) {
 	rec.Flush()
 	require.Equalf(t, 200, rec.Code, "Request to /_status failed with %d", rec.Code)
 
-	body, _ := ioutil.ReadAll(rec.Body)
+	body, _ := io.ReadAll(rec.Body)
 	expected := []byte(`{"ok":true,"status":"ok","messages":[]}`)
 
 	require.Equalf(t, expected, body,
@@ -533,7 +532,7 @@ func generateContext(t *testing.T) (*Api, error) {
 		},
 	}
 
-	key, err := ioutil.ReadFile(conf.SigningKey)
+	key, err := os.ReadFile(conf.SigningKey)
 	require.NoError(t, err)
 
 	logger := logrus.New()
@@ -560,7 +559,7 @@ func generateContext(t *testing.T) (*Api, error) {
 }
 
 func addExtraAuthorities(t *testing.T, a *Api) *Api {
-	extraCABytes, err := ioutil.ReadFile("testdata/next_server_ca.pub")
+	extraCABytes, err := os.ReadFile("testdata/next_server_ca.pub")
 	require.NoError(t, err, "Error reading testdata")
 	a.conf.ExtraAuthorities = []string{(string(extraCABytes))}
 	return a
@@ -635,7 +634,7 @@ func generateUserRequest(commonName string) (*http.Request, error) {
 	if err != nil {
 		return nil, err
 	}
-	return generateRequest(commonName, ioutil.NopCloser(key))
+	return generateRequest(commonName, io.NopCloser(key))
 }
 
 func generateSpiffeUserRequest(commonName string, proxyPath string) (*http.Request, error) {
@@ -643,7 +642,7 @@ func generateSpiffeUserRequest(commonName string, proxyPath string) (*http.Reque
 	if err != nil {
 		return nil, err
 	}
-	return generateSpiffeRequest(commonName, proxyPath, ioutil.NopCloser(key))
+	return generateSpiffeRequest(commonName, proxyPath, io.NopCloser(key))
 }
 
 func generateHostRequest(hostname string) (*http.Request, error) {
@@ -651,5 +650,5 @@ func generateHostRequest(hostname string) (*http.Request, error) {
 	if err != nil {
 		return nil, err
 	}
-	return generateRequest(hostname, ioutil.NopCloser(key))
+	return generateRequest(hostname, io.NopCloser(key))
 }

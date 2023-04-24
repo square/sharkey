@@ -4,7 +4,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"time"
 
 	"github.com/spiffe/go-spiffe/v2/spiffeid"
@@ -12,7 +12,7 @@ import (
 )
 
 func Load(file string) (conf Config, err error) {
-	data, err := ioutil.ReadFile(file)
+	data, err := os.ReadFile(file)
 	if err != nil {
 		return
 	}
@@ -99,7 +99,7 @@ type Telemetry struct {
 
 // buildConfig reads command-line options and builds a tls.Config
 func BuildTLS(opts TLS) (*tls.Config, error) {
-	caBundleBytes, err := ioutil.ReadFile(opts.CA)
+	caBundleBytes, err := os.ReadFile(opts.CA)
 	if err != nil {
 		return nil, err
 	}

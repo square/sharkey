@@ -1,7 +1,6 @@
 package storage
 
 import (
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -10,7 +9,7 @@ import (
 )
 
 func TestSqlite(t *testing.T) {
-	dbfile, err := ioutil.TempFile("", "sharkey-test-db")
+	dbfile, err := os.CreateTemp("", "sharkey-test-db")
 	require.NoError(t, err)
 	defer os.Remove(dbfile.Name())
 

@@ -18,7 +18,6 @@ package client
 
 import (
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -48,7 +47,7 @@ func TestEnroll(t *testing.T) {
 	assert.Equal(t, "calling exec on commands", hook.Entries[1].Message)
 	assert.Contains(t, hook.Entries[0].Data, "signedCert")
 	assert.Contains(t, hook.Entries[1].Data, "commands")
-	data, err := ioutil.ReadFile(c.conf.HostKeys[0].SignedCert)
+	data, err := os.ReadFile(c.conf.HostKeys[0].SignedCert)
 	if err != nil {
 		t.Fatalf("error reading signed cert: %s", err.Error())
 	}
@@ -69,7 +68,7 @@ func TestKnownHosts(t *testing.T) {
 	defer cleanup(c)
 	defer ts.Close()
 	c.makeKnownHosts()
-	data, err := ioutil.ReadFile(c.conf.KnownHosts)
+	data, err := os.ReadFile(c.conf.KnownHosts)
 	if err != nil {
 		t.Fatalf("error reading signed cert: %s", err.Error())
 	}
@@ -86,12 +85,12 @@ func TestKnownHosts(t *testing.T) {
 }
 
 func generateClient(url string) (*Client, error) {
-	signedCertTmp, err := ioutil.TempFile("", "sharkey-test")
+	signedCertTmp, err := os.CreateTemp("", "sharkey-test")
 	if err != nil {
 		panic(err)
 	}
 
-	knownHostsTmp, err := ioutil.TempFile("", "sharkey-test")
+	knownHostsTmp, err := os.CreateTemp("", "sharkey-test")
 	if err != nil {
 		panic(err)
 	}
