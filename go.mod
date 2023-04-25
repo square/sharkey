@@ -12,7 +12,7 @@ require (
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/shurcooL/githubv4 v0.0.0-20200627185320-e003124d66e4
 	github.com/sirupsen/logrus v1.7.0
-	github.com/spiffe/go-spiffe/v2 v2.1.2
+	github.com/spiffe/go-spiffe/v2 v2.1.4
 	github.com/stretchr/testify v1.8.2
 	golang.org/x/crypto v0.8.0
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
