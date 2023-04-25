@@ -3,7 +3,6 @@ package api
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -124,7 +123,7 @@ func TestEmptyGitHubUser(t *testing.T) {
 		assert.Contains(t, hook.Entries[0].Message, "no rows in result set")
 
 		res := rr.Result()
-		body, err := ioutil.ReadAll(res.Body)
+		body, err := io.ReadAll(res.Body)
 		fmt.Println(string(body))
 		require.NoError(t, err, "unexpected error reading body")
 		require.Equal(t, 200, res.StatusCode, "failed to enroll user")
@@ -177,7 +176,7 @@ func TestGitHubUser(t *testing.T) {
 		assert.Contains(t, hook.LastEntry().Data, "user")
 
 		res := rr.Result()
-		body, err := ioutil.ReadAll(res.Body)
+		body, err := io.ReadAll(res.Body)
 		fmt.Println(string(body))
 		require.NoError(t, err, "unexpected error reading body")
 		require.Equal(t, 200, res.StatusCode, "failed to enroll user")
