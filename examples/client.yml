@@ -5,7 +5,7 @@ request_addr: "https://sharkey-server.example:8080"
 # ---
 tls:
   ca: /path/to/ca-bundle.pem
-  cert: /path/to/client-certificate.pem 
+  cert: /path/to/client-certificate.pem
   key: /path/to/client-certificate-key.pem
 
 # List of host keys for OpenSSH server
@@ -31,4 +31,4 @@ sudo: "/usr/bin/sudo"
 
 # Command to restart ssh
 # If sudo is set as well, this command will be prefixed with 'sudo'
-ssh_reload: ["service", "ssh", "restart"]
+ssh_reload: ["/usr/sbin/service", "ssh", "restart"]
