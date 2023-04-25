@@ -13,4 +13,4 @@ host_keys:
     signed: "/etc/ssh/ssh_host_ecdsa_key-cert.pub"
 known_hosts: /etc/ssh/known_hosts
 sleep: "10s"
-ssh_reload: ["service", "ssh", "restart"]
+ssh_reload: ["/usr/sbin/service", "ssh", "restart"]

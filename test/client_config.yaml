@@ -10,4 +10,4 @@ host_keys:
 known_hosts: test/ssh/known_hosts
 sleep: "2s"
 sudo: "/usr/bin/sudo"
-ssh_reload: ["service", "ssh", "restart"]
+ssh_reload: ["/usr/sbin/service", "ssh", "restart"]
