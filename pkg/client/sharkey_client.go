@@ -20,7 +20,7 @@ import (
 	"bytes"
 	"crypto/tls"
 	"crypto/x509"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"os"
 	"os/exec"
@@ -112,7 +112,7 @@ func (c *Client) enroll(hostKey string, signedCert string) {
 		panic(err)
 	}
 	url := c.conf.RequestAddr + "/enroll/" + hostname // host name of machine running on
-	hostkey, err := ioutil.ReadFile(hostKey)          // path to host key
+	hostkey, err := os.ReadFile(hostKey)              // path to host key
 	if err != nil {
 		c.logger.WithFields(logrus.Fields{
 			"hostkey": hostKey,
@@ -126,7 +126,7 @@ func (c *Client) enroll(hostKey string, signedCert string) {
 		return
 	}
 	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		c.logger.WithError(err).Errorln("Error reading response from server")
 		return
@@ -135,7 +135,7 @@ func (c *Client) enroll(hostKey string, signedCert string) {
 		c.logger.WithField("body", string(body)).Errorln("Error retrieving signed cert from server")
 		return
 	}
-	tmp, err := ioutil.TempFile("", "sharkey-signed-cert")
+	tmp, err := os.CreateTemp("", "sharkey-signed-cert")
 	if err != nil {
 		c.logger.WithError(err).Errorln("Error creating temp file")
 		return
@@ -146,7 +146,7 @@ func (c *Client) enroll(hostKey string, signedCert string) {
 		c.logger.WithError(err).WithField("tmpName", tmp.Name()).Errorln("Error calling chmod")
 		return
 	}
-	err = ioutil.WriteFile(tmp.Name(), body, 0644)
+	err = os.WriteFile(tmp.Name(), body, 0644)
 	if err != nil {
 		c.logger.WithError(err).WithField("tmpName", tmp.Name()).Errorln("Error writing file")
 		return
@@ -175,7 +175,7 @@ func (c *Client) makeKnownHosts() {
 		return
 	}
 	defer resp.Body.Close()
-	str, err := ioutil.ReadAll(resp.Body)
+	str, err := io.ReadAll(resp.Body)
 	if err != nil {
 		c.logger.WithError(err).Errorln("Error reading response body")
 		return
@@ -184,7 +184,7 @@ func (c *Client) makeKnownHosts() {
 		c.logger.WithField("StatusCode", resp.StatusCode).Errorln("Error retrieving known hosts file from server")
 		return
 	}
-	tmp, err := ioutil.TempFile("", "sharkey-known-hosts")
+	tmp, err := os.CreateTemp("", "sharkey-known-hosts")
 	if err != nil {
 		c.logger.WithError(err).Errorln("Error creating temp file")
 		return
@@ -195,7 +195,7 @@ func (c *Client) makeKnownHosts() {
 		c.logger.WithError(err).WithField("tmpName", tmp.Name()).Errorln("Error calling chmod")
 		return
 	}
-	err = ioutil.WriteFile(tmp.Name(), str, 0644)
+	err = os.WriteFile(tmp.Name(), str, 0644)
 	if err != nil {
 		c.logger.WithError(err).WithField("tmpName", tmp.Name()).Errorln("Error writing file")
 		return
@@ -226,7 +226,7 @@ func (c *Client) GenerateClient() error {
 
 // buildConfig reads command-line options and builds a tls.Config
 func buildConfig(caBundlePath string) (*tls.Config, error) {
-	caBundleBytes, err := ioutil.ReadFile(caBundlePath)
+	caBundleBytes, err := os.ReadFile(caBundlePath)
 	if err != nil {
 		return nil, err
 	}
