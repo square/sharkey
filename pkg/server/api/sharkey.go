@@ -18,8 +18,8 @@ package api
 
 import (
 	"encoding/json"
-	"io/ioutil"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/square/sharkey/pkg/server/cert"
@@ -53,7 +53,7 @@ type Api struct {
 
 func Run(conf *config.Config, logger *logrus.Logger) {
 	logger.Print("Starting http server")
-	privateKey, err := ioutil.ReadFile(conf.SigningKey)
+	privateKey, err := os.ReadFile(conf.SigningKey)
 	if err != nil {
 		logger.WithError(err).Fatal("unable to read signing key file")
 	}

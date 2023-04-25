@@ -1,7 +1,7 @@
 package cli
 
 import (
-	"io/ioutil"
+	"os"
 
 	"github.com/sirupsen/logrus"
 	"github.com/square/sharkey/pkg/client"
@@ -19,7 +19,7 @@ func Run(args []string, logger *logrus.Logger) {
 
 	kingpin.MustParse(app.Parse(args))
 
-	data, err := ioutil.ReadFile(*configPath)
+	data, err := os.ReadFile(*configPath)
 	if err != nil {
 		logger.WithError(err).Fatalln("Error reading config file")
 	}
