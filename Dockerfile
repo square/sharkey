@@ -9,11 +9,7 @@
 # This image only contains the server component of sharkey,
 # the client will have to be deployed separately
 
-FROM golang:1.20-alpine as build
-
-# Install CGO deps
-RUN apk add --update gcc musl-dev && \
-    rm -rf /var/cache/apk/*
+FROM golang:1.20 as build
 
 WORKDIR /app
 
@@ -33,7 +29,7 @@ RUN cp docker.sh /usr/bin/entrypoint.sh && \
 
 
 # Create a multi-stage build with the binary
-FROM golang:1.20-alpine
+FROM golang:1.20
 
 COPY --from=build /usr/bin/sharkey-server /usr/bin/sharkey-server
 COPY --from=build /usr/bin/entrypoint.sh /usr/bin/entrypoint.sh
