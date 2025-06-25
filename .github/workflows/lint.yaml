@@ -10,8 +10,9 @@ jobs:
     name: Lint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@ee0669bd1cc54295c223e0bb666b733df41de1c5  # v2 https://github.com/actions/checkout/releases/tag/v2
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v2
+        uses: golangci/golangci-lint-action@5c56cd6c9dc07901af25baab6f2b0d9f3b7c3018  # v2 https://github.com/golangci/golangci-lint-action/releases/tag/v2
+
         with:
           version: v1.52.2
