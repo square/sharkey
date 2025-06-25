@@ -11,9 +11,14 @@
 
 FROM golang:1.20-alpine as build
 
-# Install CGO deps
-RUN apk add --update gcc musl-dev && \
-    rm -rf /var/cache/apk/*
+# Install CGO deps and SQLite
+RUN apk add --update \
+    gcc \
+    musl-dev \
+    sqlite \
+    sqlite-dev \
+    sqlite-libs \
+    && rm -rf /var/cache/apk/*
 
 WORKDIR /app
 
@@ -29,11 +34,15 @@ COPY . .
 # Build & set-up
 RUN cp docker.sh /usr/bin/entrypoint.sh && \
     chmod +x /usr/bin/entrypoint.sh && \
+    CGO_CFLAGS="-D_LARGEFILE64_SOURCE" \
     go build -buildvcs=false -o /usr/bin/sharkey-server github.com/square/sharkey/cmd/sharkey-server
 
 
 # Create a multi-stage build with the binary
 FROM golang:1.20-alpine
+
+# Install runtime dependencies
+RUN apk add --no-cache sqlite sqlite-libs
 
 COPY --from=build /usr/bin/sharkey-server /usr/bin/sharkey-server
 COPY --from=build /usr/bin/entrypoint.sh /usr/bin/entrypoint.sh
