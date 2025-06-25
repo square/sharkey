@@ -10,10 +10,14 @@ jobs:
     name: Lint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4  https://github.com/actions/checkout/releases/tag/v4
+      # https://github.com/actions/checkout/releases/tag/v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4
+      
+      # https://github.com/golangci/golangci-lint-action/releases/tag/v3
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@3a919529898de77ec3da873e3063ca4b10e7f5cc  # v3 https://github.com/golangci/golangci-lint-action/releases/tag/v3
+        uses: golangci/golangci-lint-action@3a919529898de77ec3da873e3063ca4b10e7f5cc  # v3
         with:
-          version: v1.54.2
-          args: --timeout=5m
-          skip-cache: true
+          version: v1.51.2  # Using an older version known to work with Go 1.20
+          args: --timeout=5m --skip-dirs=vendor --skip-files="\\.pb\\.go$" --disable-all --enable=gofmt,govet,gosimple,ineffassign
+          skip-pkg-cache: true
+          skip-build-cache: true

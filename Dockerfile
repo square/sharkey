@@ -9,7 +9,7 @@
 # This image only contains the server component of sharkey,
 # the client will have to be deployed separately
 
-FROM golang:1.20-alpine as build
+FROM golang:1.20 as build
 
 WORKDIR /app
 
@@ -27,8 +27,9 @@ RUN cp docker.sh /usr/bin/entrypoint.sh && \
     chmod +x /usr/bin/entrypoint.sh && \
     go build -buildvcs=false -o /usr/bin/sharkey-server github.com/square/sharkey/cmd/sharkey-server
 
+
 # Create a multi-stage build with the binary
-FROM golang:1.20-alpine
+FROM golang:1.20
 
 COPY --from=build /usr/bin/sharkey-server /usr/bin/sharkey-server
 COPY --from=build /usr/bin/entrypoint.sh /usr/bin/entrypoint.sh

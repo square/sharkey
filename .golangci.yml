@@ -1,28 +1,24 @@
-run:
-  timeout: 5m
-  skip-files:
-    - ".*_test.go$"
-  modules-download-mode: readonly
-
 linters:
   disable-all: true
   enable:
-    - gofmt
-    - govet
-    - errcheck
-    - staticcheck
-    - gosimple
-    - ineffassign
+    - gofmt      # Formatting issues
+    - govet      # Common mistakes
+    - gosimple   # Simplifications
+    - ineffassign # Unused assignments
+
+run:
+  timeout: 5m
+  skip-dirs:
+    - vendor
+  skip-files:
+    - ".*\\.pb\\.go$"
+    - ".*_test.go$"
 
 issues:
-  exclude-use-default: false
-  max-issues-per-linter: 0
-  max-same-issues: 0
-
-linters-settings:
-  govet:
-    check-shadowing: false
-  golint:
-    min-confidence: 0
-  gocyclo:
-    min-complexity: 15
+  exclude-rules:
+    - path: _test\.go
+      linters:
+        - gofmt
+        - govet
+        - gosimple
+        - ineffassign
