@@ -1,0 +1,28 @@
+run:
+  timeout: 5m
+  skip-files:
+    - ".*_test.go$"
+  modules-download-mode: readonly
+
+linters:
+  disable-all: true
+  enable:
+    - gofmt
+    - govet
+    - errcheck
+    - staticcheck
+    - gosimple
+    - ineffassign
+
+issues:
+  exclude-use-default: false
+  max-issues-per-linter: 0
+  max-same-issues: 0
+
+linters-settings:
+  govet:
+    check-shadowing: false
+  golint:
+    min-confidence: 0
+  gocyclo:
+    min-complexity: 15

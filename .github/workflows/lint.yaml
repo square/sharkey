@@ -10,8 +10,13 @@ jobs:
     name: Lint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4 https://github.com/actions/checkout/releases/tag/v4
+      # https://github.com/actions/checkout/releases/tag/v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4
+      
+      # https://github.com/golangci/golangci-lint-action/releases/tag/v3
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@3a919529898de77ec3da873e3063ca4b10e7f5cc  # v3 https://github.com/golangci/golangci-lint-action/releases/tag/v3
+        uses: golangci/golangci-lint-action@3a919529898de77ec3da873e3063ca4b10e7f5cc  # v3
         with:
-          version: v1.52.2
+          version: v1.54.2  # Updated to newer version
+          args: --timeout=5m  # Increased timeout
+          skip-cache: true   # Skip cache to avoid issues

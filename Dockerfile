@@ -11,6 +11,10 @@
 
 FROM golang:1.20 as build
 
+# Install CGO deps
+RUN apk add --update gcc musl-dev && \
+    rm -rf /var/cache/apk/*
+
 WORKDIR /app
 
 COPY go.mod .
