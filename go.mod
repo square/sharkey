@@ -7,7 +7,7 @@ require (
 	github.com/felixge/httpsnoop v1.0.4
 	github.com/go-sql-driver/mysql v1.7.1
 	github.com/gorilla/handlers v1.5.2
-	github.com/gorilla/mux v1.8.0
+	github.com/gorilla/mux v1.8.1
 	github.com/mattn/go-sqlite3 v2.0.3+incompatible
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/shurcooL/githubv4 v0.0.0-20200627185320-e003124d66e4
