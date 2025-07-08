@@ -9,7 +9,7 @@
 # This image only contains the server component of sharkey,
 # the client will have to be deployed separately
 
-FROM golang:1.20 as build
+FROM golang:1.23 as build
 
 WORKDIR /app
 
