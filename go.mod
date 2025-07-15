@@ -38,7 +38,7 @@ require (
 	github.com/shurcooL/graphql v0.0.0-20181231061246-d48a9a75455f // indirect
 	github.com/zeebo/errs v1.3.0 // indirect
 	github.com/ziutek/mymysql v0.0.0-20160623123511-8787d5581eb6 // indirect
-	golang.org/x/net v0.21.0 // indirect
+	golang.org/x/net v0.38.0 // indirect
 	golang.org/x/oauth2 v0.7.0 // indirect
 	golang.org/x/sys v0.33.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
