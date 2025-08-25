@@ -13,7 +13,7 @@ require (
 	github.com/shurcooL/githubv4 v0.0.0-20200627185320-e003124d66e4
 	github.com/sirupsen/logrus v1.7.0
 	github.com/spiffe/go-spiffe/v2 v2.5.0
-	github.com/stretchr/testify v1.10.0
+	github.com/stretchr/testify v1.11.0
 	golang.org/x/crypto v0.40.0
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
 	gopkg.in/yaml.v2 v2.4.0
