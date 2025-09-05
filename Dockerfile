@@ -9,18 +9,15 @@
 # This image only contains the server component of sharkey,
 # the client will have to be deployed separately
 
-FROM golang:1.23 as build
+FROM golang:1.23 AS build
 
 WORKDIR /app
 
-COPY go.mod .
-COPY go.sum .
+# Copy source
+COPY . .
 
 # Download dependencies
 RUN go mod download
-
-# Copy source
-COPY . .
 
 # Build & set-up
 RUN cp docker.sh /usr/bin/entrypoint.sh && \
@@ -29,7 +26,7 @@ RUN cp docker.sh /usr/bin/entrypoint.sh && \
 
 
 # Create a multi-stage build with the binary
-FROM golang:1.20
+FROM gcr.io/distroless/base-debian9:nonroot AS build-release-stage
 
 COPY --from=build /usr/bin/sharkey-server /usr/bin/sharkey-server
 COPY --from=build /usr/bin/entrypoint.sh /usr/bin/entrypoint.sh
