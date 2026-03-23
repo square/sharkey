@@ -2,6 +2,8 @@
 
 # sharkey
 
+> **DEPRECATED:** This project is no longer actively maintained. No new features or bug fixes are planned.
+
 [![license](http://img.shields.io/badge/license-apache_2.0-blue.svg?style=flat)](https://raw.githubusercontent.com/square/certigo/master/LICENSE)
 ![development status](https://img.shields.io/badge/status-alpha-orange.svg)
 [![tests](https://github.com/square/sharkey/actions/workflows/tests.yml/badge.svg)](https://github.com/square/sharkey/actions/workflows/tests.yml)
